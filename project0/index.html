@@ -95,6 +95,30 @@
     @media (max-width: 600px){
       .grid{ grid-template-columns: 1fr; }
     }
+
+    /* Contact section */
+    .contact{
+      text-align: center;
+      margin-top: 40px;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .contact a{
+      display: inline-block;
+      margin-top: 8px;
+      padding: 10px 16px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background .15s ease;
+    }
+    .contact a:hover{
+      background: #1e4fcf;
+    }
   </style>
 </head>
 <body>
@@ -135,7 +159,7 @@
         <div style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap;">
             <figure class="tile" style="flex:1; max-width:500px;">
                 <img src="./media/part2_far.jpg" alt="Zoomed-in view" style="width:100%; height:auto;">
-                <figcaption class="cap">Zoomed from afar</figcaption>
+                <figcaption class="cap">Far away view, zoom</figcaption>
             </figure>
             <figure class="tile" style="flex:1; max-width:500px;">
                 <img src="./media/part2_close.jpg" alt="Closer view, no zoom" style="width:100%; height:auto;">
@@ -153,6 +177,13 @@
             <img src="./media/part3_dolly.gif" alt="Animated dolly zoom gif" style="width:100%; height:auto; border-radius:8px;">
             <figcaption class="cap">Dolly zoom animation</figcaption>
         </figure>
+    </section>
+
+    <!-- Contact -->
+    <section class="contact">
+        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=lenci.ni@berkeley.edu&su=CS180%20Portfolio%20Inquiry" target="_blank" class="btn">
+            Contact Me
+        </a>
     </section>
 </div>
 </body>
