@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Project 1 · Colorizing the Prokudin-Gorskii Photo Collection</title>
+
+  <!-- MathJax for nice formula rendering -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    :root{
+      --bg: #f7f7f9;
+      --surface: #ffffff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --accent: #2563eb;
+      --radius-lg: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 8px 30px rgba(0,0,0,.05);
+      --gap: 20px;
+      --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+              Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--ink);
+      font-family:var(--font); -webkit-font-smoothing:antialiased; line-height:1.6;
+    }
+    a{ color: var(--accent); text-decoration: none; }
+    a:hover{ text-decoration: underline; }
+
+    .container{ max-width: 1100px; margin: 32px auto 64px; padding: 0 20px; }
+
+    .back{
+      display:inline-block; padding:8px 12px; border:1px solid var(--border);
+      border-radius:10px; background:#fff; color:var(--ink);
+      text-decoration:none; box-shadow: var(--shadow);
+    }
+
+    header{ margin:24px 0 10px; }
+    h1{
+      margin: 8px 0 6px;
+      font-size: clamp(28px, 4.5vw, 40px);
+      font-weight: 700;
+    }
+    .meta{ margin-top:6px; color: var(--muted); font-weight:600; font-size:14px; }
+
+    /* Cards / grids */
+    .card{
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-top: 20px;
+    }
+    .card h2{ margin: 0 0 12px; font-size: clamp(18px, 2.5vw, 24px); }
+
+    .desc, .explanation{ margin: 8px 0; }
+    .explanation{ color: var(--muted); }
+
+    .tile{
+      background: #fafafb;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--gap);
+      margin-top: 18px;
+    }
+    .tile img{
+      display:block; width:100%; height:auto; border-radius: 8px;
+    }
+    .cap{
+      text-align:center; color: var(--muted);
+      font-size: 14px; margin-top: 8px;
+      line-height: 1.4;
+    }
+    .cap small{
+      display:block; margin-top: 4px; color: #4b5563;
+    }
+    .cap code{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12.5px;
+      background: #f3f4f6; padding: 2px 6px; border-radius: 6px;
+    }
+
+    /* Make Part 1 images larger: 2 columns on desktop */
+    #part-1 .grid{
+      grid-template-columns: repeat(2, minmax(340px, 1fr));
+      gap: 28px;
+    }
+
+    /* Make Part 2 images match Part 1 size (2 columns on desktop) */
+    #part-2 .grid.results,
+    #part-2 .grid.self{
+      grid-template-columns: repeat(2, minmax(340px, 1fr));
+      gap: 28px;
+    }
+
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: repeat(2, 1fr); }
+      #part-1 .grid,
+      #part-2 .grid.results,
+      #part-2 .grid.self{ grid-template-columns: 1fr; gap: 20px; }
+    }
+    @media (max-width: 600px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .contact{
+      text-align: center;
+      margin-top: 40px;
+      padding: 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .contact a{
+      display: inline-block;
+      margin-top: 8px;
+      padding: 10px 16px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background .15s ease;
+    }
+    .contact a:hover{ background: #1e4fcf; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <a class="back" href="../index.html">← Back to Home</a>
+
+  <header>
+    <h1>Project 1: Images of the Russian Empire — Colorizing the Prokudin-Gorskii Photo Collection</h1>
+    <div class="meta">Sep 12, 2025</div>
+  </header>
+
+  <!-- Introduction (card) -->
+  <section class="card" id="introduction">
+    <h2>Introduction</h2>
+    <p>
+      This project is inspired by the work of Sergei Mikhailovich Prokudin-Gorskii (1863–1944).
+      Beginning in 1907, he traveled across the Russian Empire making thousands of photographs by recording
+      three filtered exposures—red, green, and blue—onto a single glass plate.
+      In this project, I align those three monochrome channels and stack them into an RGB image,
+      recombining his original filters to recover full color.
+    </p>
+  </section>
+
+  <!-- Methodology (card) -->
+  <section class="card" id="methodology">
+    <h2>Methodology</h2>
+    <p>
+      We use the <b>Green</b> channel as the anchor, align the other two channels to it, and then stack the
+      result in <code>[R, G, B]</code> order to form a color image. Alignment is single-scale and exhaustive:
+      evaluate all integer displacements <code>(dx, dy) ∈ [-15, 15] × [-15, 15]</code>. For each candidate,
+      apply the displacement relative to the anchor, compute a match score on a fixed border-cropped central
+      region, and keep the best-scoring shift (min L2 distance or max normalized cross-correlation).
+    </p>
+  </section>
+
+  <!-- Part 1 -->
+  <section class="card" id="part-1">
+    <h2>Part 1 · Single-Scale Alignment (Exhaustive Search)</h2>
+
+    <h3 style="margin-top:16px;">Metric 1 — L2 (Euclidean) Distance</h3>
+    <p class="explanation">
+      The L2 (Euclidean) distance measures the pixel-wise intensity discrepancy between two patches; lower values indicate a better match, and the metric is sensitive to global brightness and contrast changes.
+    </p>
+    <p class="explanation" style="font-size:15px;">
+      We minimize the Euclidean distance
+      $\sqrt{\sum_i \sum_j \big(I_1(i,j)-I_2(i,j)\big)^2}$.
+    </p>
+
+    <h3 style="margin-top:16px;">Metric 2 — Normalized Cross-Correlation (NCC)</h3>
+    <p class="explanation">
+      Normalized cross-correlation compares structural patterns after subtracting means and normalizing by energy; higher values indicate a better match, and the metric is largely invariant to global brightness and contrast.
+    </p>
+    <p class="explanation" style="font-size:15px;">
+      We maximize the zero-mean NCC
+      $\displaystyle \frac{\langle I_1-\overline{I_1},\; I_2-\overline{I_2}\rangle}{\lVert I_1-\overline{I_1}\rVert\,\lVert I_2-\overline{I_2}\rVert}$.
+    </p>
+
+    <!-- Cropping -->
+    <h3 style="margin-top:16px;">Cropping</h3>
+    <p class="explanation">
+      The outer edges often contain scan seams, blur, and misregistration, and shifting can introduce wrap-around pixels that falsely improve scores.
+      To make the comparison stable, we crop a fixed <b>5%</b> from each side (height and width) and evaluate both metrics on the central, overlapping region only.
+      This reduces edge artifacts and makes scores comparable across different candidate displacements.
+    </p>
+
+    <!-- Results — replace paths and shift values with your outputs -->
+    <div class="grid" style="margin-top:16px;">
+
+      <!-- Cathedral -->
+      <figure class="tile">
+        <img src="./media/cathedral_ncc.jpg" alt="Single-scale alignment (NCC) — Cathedral" loading="lazy">
+        <figcaption class="cap">
+          Cathedral — NCC, 5% crop
+          <small>Blue shift: (-2, -5)</small>
+          <small>Red shift: (1, 7)</small>
+        </figcaption>
+      </figure>
+
+      <!-- Monastery -->
+      <figure class="tile">
+        <img src="./media/monastery_ncc.jpg" alt="Single-scale alignment (NCC) — Monastery" loading="lazy">
+        <figcaption class="cap">
+          Monastery — NCC, 5% crop
+          <small>Blue shift: (-2, 3)</small>
+          <small>Red shift: (1, 6)</small>
+        </figcaption>
+      </figure>
+
+      <!-- Tobolsk -->
+      <figure class="tile">
+        <img src="./media/tobolsk_ncc.jpg" alt="Single-scale alignment (NCC) — Tobolsk" loading="lazy">
+        <figcaption class="cap">
+          Tobolsk — NCC, 5% crop
+          <small>Blue shift: (-3, -3)</small>
+          <small>Red shift: (1, 4)</small>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Part 2 -->
+  <section class="card" id="part-2">
+    <h2>Part 2 · Pyramid Alignment (Coarse-to-Fine)</h2>
+
+    <!-- Paragraph 1: general flow of the approach -->
+  <p class="desc">
+    I align the channels with a multiscale image pyramid: I build successively downsampled versions of each channel (2× per level), start at the coarsest scale with a small local exhaustive search, then move up the pyramid by doubling the current shift and refining it with a tiny window at each finer level. At every level I score alignment on the central content only (cropping borders) and, once back at full resolution, I apply the final displacement and stack the channels in <code>[R, G, B]</code>.
+  </p>
+
+  <!-- Paragraph 2: choices I made -->
+  <p class="desc">
+    In practice, the <em>Emir</em> plate revealed that aligning the Red channel directly to Blue was brittle, so I switched to using Green as the anchor, which consistently produced sharper alignments across images. I stop building the pyramid when the smallest image dimension becomes sufficiently small (e.g., ≤ 128 px), and I crop more aggressively for scoring—between <b>5–15%</b> of both width and height depending on the plate—to avoid seams, blur, and roll-in artifacts. Per-level refinement uses a small search radius (e.g., ±3 pixels), with the coarse-to-fine propagation recovering large shifts efficiently.
+  </p>
+
+    <!-- Results: 14 images -->
+    <h3 style="margin-top:18px;">Results (Pyramid + 15% crop)</h3>
+    <div class="grid results" style="margin-top:12px;">
+      <figure class="tile">
+        <img src="./media/cathedral_pyr.jpg" alt="Pyramid result 01" loading="lazy">
+        <figcaption class="cap">Cathedral — NCC, 15% crop
+          <small>Blue shift: (-2, -5)</small>
+          <small>Red shift: (1, 7)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/monastery_pyr.jpg" alt="Pyramid result 02" loading="lazy">
+        <figcaption class="cap">Monastery — NCC, 15% crop
+          <small>Blue shift: (-2, 3)</small>
+          <small>Red shift: (1, 6)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/tobolsk_pyr.jpg" alt="Pyramid result 03" loading="lazy">
+        <figcaption class="cap">Tobolsk — NCC, 15% crop
+          <small>Blue shift: (-3, -3)</small>
+          <small>Red shift: (1, 4)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/church_pyr.jpg" alt="Pyramid result 04" loading="lazy">
+        <figcaption class="cap">Church — NCC, 15% crop
+          <small>Blue shift: (-4, -25)</small>
+          <small>Red shift: (-8, 33)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/emir_pyr.jpg" alt="Pyramid result 05" loading="lazy">
+        <figcaption class="cap">Emir — NCC, 15% crop
+          <small>Blue shift: (-24, -49)</small>
+          <small>Red shift: (17, 57)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/harvesters_pyr.jpg" alt="Pyramid result 06" loading="lazy">
+        <figcaption class="cap">Harvesters — NCC, 15% crop
+          <small>Blue shift: (-17, -59)</small>
+          <small>Red shift: (-3, 65)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/icon_pyr.jpg" alt="Pyramid result 07" loading="lazy">
+        <figcaption class="cap">Icon — NCC, 15% crop
+          <small>Blue shift: (-17, -41)</small>
+          <small>Red shift: (5, 48)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/italil_pyr.jpg" alt="Pyramid result 08" loading="lazy">
+        <figcaption class="cap">Italil — NCC, 15% crop
+          <small>Blue shift: (-21, -38)</small>
+          <small>Red shift: (15, 39)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/lastochikino_pyr.jpg" alt="Pyramid result 09" loading="lazy">
+        <figcaption class="cap">Lastochikino — NCC, 15% crop
+          <small>Blue shift: (2, 3)</small>
+          <small>Red shift: (-7, 78)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/lugano_pyr.jpg" alt="Pyramid result 10" loading="lazy">
+        <figcaption class="cap">Lugano — NCC, 15% crop
+          <small>Blue shift: (16, -41)</small>
+          <small>Red shift: (-13, 52)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/melons_pyr.jpg" alt="Pyramid result 11" loading="lazy">
+        <figcaption class="cap">Melons — NCC, 15% crop
+          <small>Blue shift: (-11, -82)</small>
+          <small>Red shift: (3, 96)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/self_portrait_pyr.jpg" alt="Pyramid result 12" loading="lazy">
+        <figcaption class="cap">Self Portrait — NCC, 15% crop
+          <small>Blue shift: (-29, -79)</small>
+          <small>Red shift: (8, 98)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/three_generations_pyr.jpg" alt="Pyramid result 13" loading="lazy">
+        <figcaption class="cap">Three Generations — NCC, 15% crop
+          <small>Blue shift: (-14, -53)</small>
+          <small>Red shift: (-3, 59)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/siren_pyr.jpg" alt="Pyramid result 14" loading="lazy">
+        <figcaption class="cap">Siren — NCC, 15% crop
+          <small>Blue shift: (6, -49)</small>
+          <small>Red shift: (-19, 47)</small>
+        </figcaption>
+      </figure>
+    </div>
+
+    <!-- Self-chosen pictures -->
+    <h3 style="margin-top:24px;">Self-Chosen Pictures</h3>
+    <p class="explanation">
+      Three additional plates processed with the same pyramid pipeline (15% crop for scoring).
+    </p>
+    <div class="grid self" style="margin-top:12px;">
+      <figure class="tile">
+        <img src="./media/mosque_pyr.jpg" alt="Self-chosen result 01" loading="lazy">
+        <figcaption class="cap">Mosque — NCC, 15% crop
+          <small>Blue shift: (-10, -26)</small>
+          <small>Red shift: (1, 44)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/piony_pyr.jpg" alt="Self-chosen result 02" loading="lazy">
+        <figcaption class="cap">Piony — NCC, 15% crop
+          <small>Blue shift: (-3, -52)</small>
+          <small>Red shift: (-9, 53)</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/cross_pyr.jpg" alt="Self-chosen result 03" loading="lazy">
+        <figcaption class="cap">Cross — NCC, 15% crop
+          <small>Blue shift: (7, -67)</small>
+          <small>Red shift: (-13, 75)</small>
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="contact">
+    <a href="mailto:lenci.ni@berkeley.edu?subject=CS180%20Portfolio%20Inquiry" class="btn">
+      Contact Me
+    </a>
+  </section>
+</div>
+</body>
+</html>
