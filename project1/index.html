@@ -196,13 +196,14 @@
       $\displaystyle \frac{\langle I_1-\overline{I_1},\; I_2-\overline{I_2}\rangle}{\lVert I_1-\overline{I_1}\rVert\,\lVert I_2-\overline{I_2}\rVert}$.
     </p>
 
-    <!-- Cropping -->
-    <h3 style="margin-top:16px;">Cropping</h3>
+    <!-- Design choices -->
+    <h3 style="margin-top:16px;">Design Choices</h3>
     <p class="explanation">
-      The outer edges often contain scan seams, blur, and misregistration, and shifting can introduce wrap-around pixels that falsely improve scores.
-      To make the comparison stable, we crop a fixed <b>5%</b> from each side (height and width) and evaluate both metrics on the central, overlapping region only.
-      This reduces edge artifacts and makes scores comparable across different candidate displacements.
+      To make single-scale matching reliable, I first apply a fixed <b>5%</b> border crop on all sides (height and width) before scoring. 
+      This removes scan seams, soft edges, and any wrap-around pixels introduced by shifting, so the metric evaluates only the stable, overlapping center. 
+      For the similarity measure, I prefer <em>normalized cross-correlation (NCC)</em> over the plain L2 distance: NCC subtracts means and normalizes energy, making it far less sensitive to cross-channel exposure and contrast differences that are common in these plates. 
     </p>
+
 
     <!-- Results — replace paths and shift values with your outputs -->
     <div class="grid" style="margin-top:16px;">
@@ -243,18 +244,29 @@
   <section class="card" id="part-2">
     <h2>Part 2 · Pyramid Alignment (Coarse-to-Fine)</h2>
 
-    <!-- Paragraph 1: general flow of the approach -->
-  <p class="desc">
-    I align the channels with a multiscale image pyramid: I build successively downsampled versions of each channel (2× per level), start at the coarsest scale with a small local exhaustive search, then move up the pyramid by doubling the current shift and refining it with a tiny window at each finer level. At every level I score alignment on the central content only (cropping borders) and, once back at full resolution, I apply the final displacement and stack the channels in <code>[R, G, B]</code>.
-  </p>
+<!-- Paragraph 1: general flow of the approach (clarified) -->
+<p class="desc">
+  I align the channels with a multiscale (pyramidal) strategy. 
+  For each channel, I build a stack of images, each downsampled by 2× from the previous layer. 
+  At the coarsest level I run a small exhaustive search to get an initial shift. 
+  Then, as I descend the pyramid to finer scales, I <em>double</em> that estimate to account for the new resolution and search only a tiny window around it to refine the shift. 
+  Each refinement is added to the running estimate, so the final displacement at full resolution is the accumulated result of all coarse-to-fine tweaks.
+</p>
 
-  <!-- Paragraph 2: choices I made -->
-  <p class="desc">
-    In practice, the <em>Emir</em> plate revealed that aligning the Red channel directly to Blue was brittle, so I switched to using Green as the anchor, which consistently produced sharper alignments across images. I stop building the pyramid when the smallest image dimension becomes sufficiently small (e.g., ≤ 128 px), and I crop more aggressively for scoring—between <b>5–15%</b> of both width and height depending on the plate—to avoid seams, blur, and roll-in artifacts. Per-level refinement uses a small search radius (e.g., ±3 pixels), with the coarse-to-fine propagation recovering large shifts efficiently.
-  </p>
+<!-- Paragraph 2: choices I made (uniform crop, green anchor, stop, radius) -->
+<p class="desc">
+  Similar to part 1, I chose to use NCC as my scoring metric because NCC subtracts means and normalizes energy, making it far less sensitive to cross-channel exposure and contrast differences that are common in these plates.
+  In practice, aligning the Red plate for <em>Emir</em> on Blue was brittle, so I switched to using Green as the anchor; 
+  aligning both Blue→Green and Red→Green consistently sharpened edges across images. 
+  I stop building the pyramid once the smallest image dimension drops below a threshold (e.g., ≤ 128 px), which keeps the coarse search cheap but informative. 
+  To stabilize scoring, I apply a <stronguniform>fixed</stronguniform> border crop (increased from 5% to about <strong>15%</strong> of both width and height) at every pyramid level and for all plates, removing seams and wrap-around so the metric focuses on the central content. 
+  With that setup, a tight per-level search radius (≈ ±3 px) is sufficient because large global shifts are recovered by the coarse-to-fine propagation.
+</p>
+
+
 
     <!-- Results: 14 images -->
-    <h3 style="margin-top:18px;">Results (Pyramid + 15% crop)</h3>
+    <h3 style="margin-top:18px;">Results (Pyramid + NCC + 15% crop)</h3>
     <div class="grid results" style="margin-top:12px;">
       <figure class="tile">
         <img src="./media/cathedral_pyr.jpg" alt="Pyramid result 01" loading="lazy">
