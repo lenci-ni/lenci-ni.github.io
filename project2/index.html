@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Project 2 · Fun with Filters and Frequencies</title>
+
+  <!-- MathJax for equations -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [["$","$"],["\\(","\\)"]] } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    :root{
+      --bg: #f7f7f9;       --surface:#fff;       --ink:#111827;       --muted:#6b7280;
+      --border:#e5e7eb;    --accent:#2563eb;     --radius-lg:16px;    --radius-sm:10px;
+      --shadow:0 8px 30px rgba(0,0,0,.05);        --gap:20px;          --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font); -webkit-font-smoothing:antialiased; line-height:1.6}
+    a{color:var(--accent); text-decoration:none}
+    a:hover{text-decoration:underline}
+    .container{max-width:1100px; margin:32px auto 64px; padding:0 20px}
+
+    .back{display:inline-block; padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; color:var(--ink); text-decoration:none; box-shadow:var(--shadow)}
+
+    header{margin:24px 0 10px}
+    h1{margin:8px 0 6px; font-size:clamp(28px,4.5vw,40px); font-weight:700}
+    .meta{margin-top:6px; color:var(--muted); font-weight:600; font-size:14px}
+
+    .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); padding:24px; margin-top:20px}
+    .card h2{margin:0 0 12px; font-size:clamp(18px,2.5vw,24px)}
+
+  .desc,.explanation{margin:8px 0}
+  .explanation{color:var(--ink)}
+
+    .tile{background:#fafafb; border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px}
+
+    .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--gap); margin-top:18px}
+    .grid.cols-2{grid-template-columns:repeat(2,minmax(340px,1fr)); gap:28px}
+
+    .tile img{display:block; width:100%; height:auto; border-radius:8px}
+    .cap{text-align:center; color:var(--muted); font-size:14px; margin-top:8px; line-height:1.4}
+    .cap small{display:block; margin-top:4px; color:#4b5563}
+    .cap code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12.5px; background:#f3f4f6; padding:2px 6px; border-radius:6px}
+
+    pre{background:#0b1220; color:#e5e7eb; padding:16px; border-radius:12px; overflow:auto; border:1px solid #0f172a; box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+    code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:13px}
+
+    /* Section-specific grid tweaks */
+    #p1 .grid.cols-2, #p2 .grid.cols-2{grid-template-columns:repeat(2,minmax(340px,1fr))}
+
+    /* Part 1.1: larger tiles without changing container width */
+    /* Use two wider columns so images appear larger on wide screens. Increase gap for clearer separation. */
+    #p1 .p11-grid {
+      --gap: 28px; /* larger gaps for this grid only */
+      grid-template-columns: repeat(3, minmax(260px, 1fr)); /* three columns for 3-in-a-row layout */
+      gap: var(--gap); /* ensure the local var is used */
+    }
+    /* Shrink images slightly in Part 1.1 so they sit a bit smaller inside their tiles */
+    #p1 .p11-grid .tile img {
+      max-height: 380px;
+      width: auto;         /* don't stretch to full column width */
+      max-width: 100%;
+      object-fit: contain; /* preserve aspect */
+      display: block;
+      margin: 0 auto;      /* center in the tile horizontally */
+    }
+    #p1 .p11-grid .tile { padding: 6px; }    /* less inner padding = bigger images */
+    /* Edge-to-edge variant (uncomment if you want images to span full width) */
+    /* #p1 .p11-grid .tile { padding: 0; } */
+
+    /* Part 1.2: denser grid for smaller comparison images (3 per row) */
+    #p1 .p12-grid {
+      grid-template-columns: repeat(3, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    #p1 .p12-grid .tile { padding: 8px; }
+
+  /* Make any element using `p12-grid` display two columns by default (2 images per row) */
+  .p12-grid { grid-template-columns: repeat(2, minmax(220px, 1fr)); gap: 12px; }
+  .p12-grid .tile { padding: 6px; }
+  /* helpers for forcing rows with a specific column count */
+  .row-2 { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+  .row-3 { grid-template-columns: repeat(3, minmax(140px, 1fr)); }
+
+  /* Higher-specificity overrides so .p12-grid.row-3 actually displays 3 columns when present */
+  .p12-grid.row-2 { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+  .p12-grid.row-3 { grid-template-columns: repeat(3, minmax(140px, 1fr)); }
+
+    /* Part 2.1: larger square thumbnails for the palace / sharpen examples */
+    #p2 .p21-grid {
+      grid-template-columns: repeat(3, minmax(260px, 1fr));
+      gap: 20px;
+    }
+    #p2 .p21-grid .tile { padding: 8px; }
+    #p2 .p21-grid .tile img {
+      display: block;
+      width: 100%;
+      height: auto; /* restore original aspect */
+      border-radius: 8px;
+    }
+
+    /* Stacks visualization — make these tiles and images much larger */
+    .stacks-grid { grid-template-columns: repeat(3, minmax(420px, 1fr)); gap: 28px; }
+    .stacks-grid .tile { padding: 12px; }
+    .stacks-grid .tile img { max-height: 520px; object-fit: contain; }
+
+  /* City + Sea: first row 2 columns, second row the blend centered */
+  .city-sea-grid { grid-template-columns: repeat(2, minmax(340px,1fr)); gap: var(--gap); }
+  .city-sea-grid figure.tile:nth-child(3) {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-self: center; /* don't stretch to full width; center the tile */
+    width: -webkit-fit-content; /* fallbacks for older engines */
+    width: -moz-fit-content;
+    width: fit-content; /* shrink-wrap to image+padding */
+  padding: 12px 4px; /* keep vertical padding, reduce horizontal padding so box hugs image width */
+  }
+  .city-sea-grid figure.tile:nth-child(3) img { width: auto; max-width: 60%; height: auto; display: block; }
+  
+  /* Make a one-item grid that shrink-wraps its content */
+  .grid.snug {
+    grid-template-columns: max-content;   /* column width = content width */
+    justify-content: center;              /* center the tile */
+  }
+
+  /* Make the tile hug its contents */
+  .tile.snug {
+    width: max-content;                   /* shrink to img + padding */
+  }
+
+  /* Ensure the image isn't forced to 100% of a wide column */
+  .tile.snug img {
+    width: auto;                          /* don't stretch */
+    height: auto;
+    display: block;
+  }
+
+  /* (optional) remove default figure margins if any */
+  figure { margin: 0; }
+  /* Make the caption match the image width inside the shrink-wrapped tile */
+  .city-sea-grid figure.tile:nth-child(3) .cap { width: 100%; box-sizing: border-box; text-align: center; }
+
+    /* Part 2.2: tighter tiles for the Derek + Nutmeg hybrid preview */
+    #p2 .p22-grid { grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 10px; }
+    #p2 .p22-grid .tile { padding: 6px; }
+    #p2 .p22-grid .tile img { max-height: 220px; margin-bottom:6px; object-fit:contain }
+
+    @media (max-width:900px){ .grid{grid-template-columns:repeat(2,1fr)} .grid.cols-2{grid-template-columns:1fr; gap:20px} }
+    @media (max-width:600px){ .grid{grid-template-columns:1fr} }
+
+    .contact{text-align:center; margin-top:40px; padding:24px; border-top:1px solid var(--border); color:var(--muted); font-size:14px}
+    .contact a{display:inline-block; margin-top:8px; padding:10px 16px; background:var(--accent); color:#fff; border-radius:8px; text-decoration:none; font-weight:600; transition:background .15s ease}
+    .contact a:hover{background:#1e4fcf}
+
+    /* Tiny labels */
+    .badge{display:inline-block; font-size:12px; color:#374151; background:#EEF2FF; border:1px solid #E0E7FF; padding:3px 8px; border-radius:999px; margin-right:8px}
+  </style>
+</head>
+<body>
+<div class="container">
+  <a class="back" href="../index.html">← Back to Home</a>
+
+  <header>
+    <h1>Project 2: Fun with Filters and Frequencies!</h1>
+    <div class="meta"><!-- TODO: date --> Sept 2025</div>
+  </header>
+
+  <!-- Intro -->
+  <section class="card" id="introduction">
+    <h2>Overview</h2>
+    <p>
+      This project investigates how spatial filtering and frequency decomposition affect image structure and perception. It begins with implementing convolution and edge detection (finite differences and derivatives of Gaussians) to build intuition about smoothing, noise, and gradients. The work then applies unsharp masking for sharpening and constructs hybrid images that emphasize high frequencies from one image and low frequencies from another to create distance-dependent interpretations. Finally, Gaussian and Laplacian stacks enable multiresolution blending for seamless composites such as the classic “oraple.”
+    </p>
+  </section>
+
+  <!-- PART 1 -->
+  <section class="card" id="p1">
+    <h2>Part 1 · Fun with Filters</h2>
+
+    <!-- 1.1 Convolution -->
+    <h3>1.1: Convolutions from Scratch!</h3>
+    <p class="desc">
+    I implemented 2D convolution in NumPy in two ways: a  four-loop version and a two-loop version that vectorizes the inner multiply–sum. 
+    I compared both against SciPy’s <code>signal.convolve2d</code>. Using a 9×9 box (mean) filter produced the expected slight blur of the original image. 
+    I then convolved the image with finite-difference derivatives in x and y, which highlight vertical and horizontal edges, respectively.
+    </p>
+
+    <p class="desc">
+    Running my NumPy implementations showed a large spread in runtime. The straightforward four-loop
+    implementation took about <strong>104&nbsp;s</strong> on this image/kernel, the two-loop (vectorized patch) version ran in
+    about <strong>15&nbsp;s</strong>, and SciPy’s <code>convolve2d</code> was by far the fastest at roughly <strong>0.4&nbsp;s</strong>.
+    </p>
+
+    <p class="desc">
+    For padding, both the four and two for loop implementations pad the image by half the kernel height and
+    width on every side (i.e., <code>pad_h = kernel_h // 2</code>, <code>pad_w = kernel_w // 2</code>) so that the kernel
+    is centered over every original pixel and the output has the same spatial dimensions as the input. In the snippets
+    above I used <code>np.pad(..., mode='constant')</code> (zero padding).
+    </p>
+
+    <p class="desc">
+    In <code>scipy.signal.convolve2d</code>, the call
+    <code>convolve2d(img_gray, box_filter, mode='same', boundary='fill', fillvalue=0)</code>
+    uses zero padding: pixels outside the image are treated as the constant
+    <code>0</code> (from <code>boundary='fill'</code> and <code>fillvalue=0</code>). With
+    <code>mode='same'</code>, the output keeps the same height and width as the input.
+    </p>
+
+    <!-- 3 on the first row, 2 on the second row -->
+  <div class="grid p11-grid">
+      <!-- Row 1 -->
+      <figure class="tile">
+        <img src="./media/1_1.jpg" alt="Original" loading="lazy">
+        <figcaption class="cap">Original Image</figcaption>
+      </figure>
+
+      <figure class="tile">
+        <img src="./media/1_1_box_filter.png" alt="Box Filter" loading="lazy">
+        <figcaption class="cap">Convolved Image with Box Filter</figcaption>
+      </figure>
+
+      <figure class="tile">
+        <img src="./media/1_1_scipy_box_filter.png" alt="SciPy Filter" loading="lazy">
+        <figcaption class="cap">Convolved Image with SciPy</figcaption>
+      </figure>
+
+      <!-- Row 2 -->
+      <figure class="tile">
+        <img src="./media/1_1_grad_x.png" alt="Derivative X" loading="lazy">
+        <figcaption class="cap">Convolved Image with Derivative X</figcaption>
+      </figure>
+
+      <figure class="tile">
+        <img src="./media/1_1_grad_y.png" alt="Derivative Y" loading="lazy">
+        <figcaption class="cap">Convolved Image with Derivative Y</figcaption>
+      </figure>
+    </div>
+
+    <details style="margin-top:14px">
+      <summary><strong>Implementation snippets (NumPy convolution)</strong></summary>
+      <pre><code class="language-python">def conv2d_four_loops(image, kernel):
+    kernel = np.rot90(kernel, 2)
+    kernel_h, kernel_w = kernel.shape
+    img_h, img_w = image.shape
+    pad_h, pad_w = kernel_h // 2, kernel_w // 2
+
+    padded = np.pad(image, ((pad_h, pad_h), (pad_w, pad_w)), mode='constant')
+    output = np.zeros((img_h, img_w))
+
+    for i in range(img_h):
+        for j in range(img_w):
+            for m in range(kernel_h):
+                for n in range(kernel_w):
+                    output[i, j] += padded[i + m, j + n] * kernel[m, n]
+    return output
+
+def conv2d_two_loops(image, kernel):
+    kernel = np.rot90(kernel, 2)
+    kernel_h, kernel_w = kernel.shape
+    img_h, img_w = image.shape
+    pad_h, pad_w = kernel_h // 2, kernel_w // 2
+
+    padded = np.pad(image, ((pad_h, pad_h), (pad_w, pad_w)), mode='constant')
+    output = np.zeros((img_h, img_w))
+
+    for i in range(img_h):
+        for j in range(img_w):
+            patch = padded[i:i + kernel_h, j:j + kernel_w]
+            output[i, j] = np.sum(patch * kernel)
+    return output
+</code></pre>
+    </details>
+
+    <!-- 1.2 Finite Differences / Edges -->
+    <h3 style="margin-top:18px">Part 1.2: Finite Difference Operator</h3>
+    <p class="desc">
+      Using $D_x = [ -1,\ 1 ]$ and $D_y = [ -1;\ 1 ]$, I compute partial derivatives, gradient magnitude $\sqrt{I_x^2 + I_y^2}$, and a binarized edge map via thresholding.
+      I chose <strong>0.30</strong> as the threshold for the binarized edges.
+    </p>
+
+    <div class="grid p12-grid">
+      <figure class="tile">
+        <img src="./media/cameraman.png" alt="Ix" loading="lazy">
+        <figcaption class="cap">Cameraman — Original Image</figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_2_I_x.png" alt="Ix" loading="lazy">
+        <figcaption class="cap">Partial Derivative $I_x$</figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_2_I_y.png" alt="Iy" loading="lazy">
+        <figcaption class="cap">Partial Derivative $I_y$</figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_2_grad_mag_normalized.png" alt="Grad magnitude" loading="lazy">
+        <figcaption class="cap">Gradient magnitude</figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_2_edge_binary_03.png" alt="Edge map" loading="lazy">
+        <figcaption class="cap">Binarized edges
+          <small>threshold = 0.3</small>
+        </figcaption>
+      </figure>
+    </div>
+
+    <div style="grid-column:1/-1">
+      <p class="explanation" style="margin:10px 0 6px; color:var(--ink)">
+        After experimenting with several cutoffs, I found a threshold near 0.3 gives the best
+        visual balance for this image. At that threshold, the cameraman's silhouette and the tripod legs are preserved
+        with few breaks, while many background edges are suppressed. Lower thresholds (e.g., 0.2)
+        begin to reveal more of background details; higher thresholds (e.g., 0.4) tend to cause fragments. 
+        The images below compare these settings so you can see the trade-offs visually.
+      </p>
+    </div>
+
+    <div class="grid p12-grid row-2">
+      <figure class="tile">
+        <img src="./media/1_2_edge_binary_02.png" alt="Edge map" loading="lazy">
+        <figcaption class="cap">Binarized edges
+          <small>threshold = 0.2</small>
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_2_edge_binary_04.png" alt="Edge map" loading="lazy">
+        <figcaption class="cap">Binarized edges
+          <small>threshold = 0.4</small>
+        </figcaption>
+      </figure>
+    </div>
+
+    <!-- 1.3 Gaussian & DoG -->
+    <h3 style="margin-top:18px">Part 1.3: Derivative of Gaussian (DoG) Filter</h3>
+    <p class="desc">
+      Since the results with just the difference operator were quite noisy, I first smoothed the image with a 
+      Gaussian filter <em>G</em> and then repeated the derivative → magnitude → threshold steps. I built a separable 2D Gaussian via 
+      <code>cv2.getGaussianKernel(ksize, σ)</code> and an outer product (<code>G2D = g @ g.T</code>), convolved the 
+      image with <em>G</em>, then applied the same <code>D<sub>x</sub></code>, <code>D<sub>y</sub></code> filters. 
+      The differences are clear: the Gaussian removes high-frequency speckle, so the gradient field is smoother and 
+      edges are more continuous with less noise. 
+    </p>
+
+    <div class="grid p12-grid">
+      <figure class="tile">
+        <img src="./media/cameraman.png" alt="Ix" loading="lazy">
+        <figcaption class="cap">Cameraman — Original Image</figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_3_blurred.png" alt="Gaussian kernel viz" loading="lazy">
+        <figcaption class="cap">Blurred Image with Gaussian Filter
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_3_gaussian.png" alt="Gaussian kernel viz" loading="lazy">
+        <figcaption class="cap">Gaussian Filter
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_3_I_x.png" alt="DoG kernel viz" loading="lazy">
+        <figcaption class="cap">Partial Derivative X with Gaussian Filter
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_3_I_y.png" alt="DoG kernel viz" loading="lazy">
+        <figcaption class="cap">Partial Derivative Y with Gaussian Filter
+        </figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_3_grad_mag_normalized.png" alt="Cameraman DoG" loading="lazy">
+        <figcaption class="cap">Gradient magnitude</figcaption>
+      </figure>
+      <figure class="tile">
+        <img src="./media/1_3_edge_binary.png" alt="Finite difference" loading="lazy">
+        <figcaption class="cap">Binarized Edge Image with Gaussian Filter</figcaption>
+      </figure>
+
+      <div style="grid-column:1/-1">
+        <p class="explanation" style="margin:10px 0 6px">
+            Next, I formed <em>derivative-of-Gaussian</em> filters so the smoothing + derivative can be done in a single convolution. 
+            I first built a 2D Gaussian kernel <code>G</code> using <code>cv2.getGaussianKernel(ksize, σ)</code> and an outer product 
+            (<code>G = g @ g.T</code>). Then I created <code>G<sub>x</sub> = G * D<sub>x</sub></code> (horizontal derivative) and 
+            <code>G<sub>y</sub> = G * D<sub>y</sub></code> (vertical derivative) by convolving <code>G</code> with the finite-difference 
+            kernels <code>D<sub>x</sub> = [-1, 1]</code> and <code>D<sub>y</sub> = [-1; 1]</code> along their respective axes. 
+            By associativity of convolution, the result should match the two-step pipeline: 
+            <code>D<sub>x</sub> * (G * I) = (D<sub>x</sub> * G) * I</code> and 
+            <code>D<sub>y</sub> * (G * I) = (D<sub>y</sub> * G) * I</code>. 
+            I verified this by convolving the image once with <code>G<sub>x</sub></code> and <code>G<sub>y</sub></code>, 
+            computing gradient magnitude and thresholding, and then comparing against the “Gaussian-then-finite-difference” results. 
+        </p>
+      </div>
+
+      <div style="grid-column:1/-1">
+        <div class="grid p12-grid row-2">
+          <figure class="tile">
+            <img src="./media/1_3_DoG_x.png" alt="DoG kernel viz" loading="lazy">
+            <figcaption class="cap">DoG X Filter</figcaption>
+          </figure>
+          <figure class="tile">
+            <img src="./media/1_3_DoG_y.png" alt="Cameraman Gaussian" loading="lazy">
+            <figcaption class="cap">DoG Y Filter</figcaption>
+          </figure>
+          <figure class="tile">
+            <img src="./media/1_3_I_x_DoG_x.png" alt="Cameraman Gaussian" loading="lazy">
+            <figcaption class="cap">Partial Derivative X with DoG X Filter</figcaption>
+          </figure>
+          <figure class="tile">
+            <img src="./media/1_3_I_y_DoG_y.png" alt="Cameraman Gaussian" loading="lazy">
+            <figcaption class="cap">Partial Derivative Y with DoG Y Filter</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PART 2 -->
+  <section class="card" id="p2">
+    <h2>Part 2 · Fun with Frequencies!</h2>
+
+    <!-- 2.1 Unsharp Mask -->
+    <h3>Part 2.1: Image "Sharpening"</h3>
+    <p class="desc">
+    The starting point is a slightly blurry photo of the Taj Mahal. I built a sharpening mask by first creating a 
+    Gaussian-blurred version of the image \(B = G_\sigma * I\) and then isolating the high-frequency residual \(H = I - B\). 
+    The sharpened result is obtained by adding a scaled amount of this residual back to the original, \(I_{\text{sharp}} = I + \alpha\,H\). 
+    Varying \(\alpha\) controls how much high-frequency detail is reintroduced: \(\alpha = 1.0\) yields a subtle effect close to the original, 
+    \(\alpha = 1.5\) produced the best balance of crisp edges and natural texture for this image, and larger values (e.g., \(\alpha = 2.0\) 
+    or \(3.0\)) begin to over-accentuate edges.
+    </p>
+
+    <!-- Row 1: 3 columns -->
+    <div class="grid p21-grid">
+    <figure class="tile">
+        <img src="./media/taj.jpg" alt="Taj blurred" loading="lazy">
+        <figcaption class="cap">Taj — Original Blurred Image</figcaption>
+    </figure>
+    <figure class="tile">
+        <img src="./media/2_1_sharpened_1.5.png" alt="Taj sharpened α=1.5" loading="lazy">
+        <figcaption class="cap">Sharpened Image ($\alpha = 1.5$)</figcaption>
+    </figure>
+    <figure class="tile">
+        <img src="./media/2_1_taj_high_freq.png" alt="Taj sharpened α=1.5" loading="lazy">
+        <figcaption class="cap">Taj — High Frequencies</figcaption>
+    </figure>
+    </div>
+
+    <!-- Row 2: 3 columns -->
+  <div class="grid p21-grid">
+    <figure class="tile">
+        <img src="./media/2_1_sharpened_1.0.png" alt="Taj sharpened α=1.0" loading="lazy">
+        <figcaption class="cap">Sharpened Image ($\alpha = 1.0$)</figcaption>
+    </figure>
+    <figure class="tile">
+        <img src="./media/2_1_sharpened_2.0.png" alt="Taj sharpened α=2.0" loading="lazy">
+        <figcaption class="cap">Sharpened Image ($\alpha = 2.0$)</figcaption>
+    </figure>
+    <figure class="tile">
+        <img src="./media/2_1_sharpened_3.0.png" alt="Taj sharpened α=3.0" loading="lazy">
+        <figcaption class="cap">Sharpened Image ($\alpha = 3.0$)</figcaption>
+    </figure>
+    </div>
+
+    <div style="grid-column:1/-1">
+    <p class="explanation" style="margin:10px 0 6px">
+        Next, I started with a sharp image, intentionally blurred it with a Gaussian filter, 
+        and then tried to “undo” that blur using unsharp masking. The idea is that Gaussian blur suppresses high frequencies; if we compute the 
+        residual \(H = I - (G_\sigma * I)\) and add a scaled amount back, \(I_{\text{sharp}} = I + \alpha H\), we boost those missing high 
+        frequencies and increase edge contrast. In practice, the sharpened image becomes noticeably sharper than the blurred one and 
+        moves visually closer to the original. However, because the strong blur actually removes information, sharpening cannot perfectly 
+        reconstruct the original and pushing \(\alpha\) too high introduces harsh edges. 
+    </p>
+    </div>
+
+  <div class="grid p21-grid" style="grid-template-columns: repeat(2, minmax(260px, 1fr));">
+    <figure class="tile">
+        <img src="./media/palace.jpg" alt="Palace sharpened α=1.0" loading="lazy">
+        <figcaption class="cap">Palace — Original Sharp Image</figcaption>
+    </figure>
+    <figure class="tile">
+        <img src="./media/2_1_palace_blurred.png" alt="Taj sharpened α=2.0" loading="lazy">
+        <figcaption class="cap">Blurred Image</figcaption>
+    </figure>
+    <figure class="tile">
+        <img src="./media/2_1_palace_high_freq.png" alt="Palace sharpened α=1.0" loading="lazy">
+        <figcaption class="cap">Palace — High Frequencies</figcaption>
+    </figure>
+    <figure class="tile">
+        <img src="./media/2_1_palace_sharpened.png" alt="Taj sharpened α=3.0" loading="lazy">
+        <figcaption class="cap">Sharpened Image ($\alpha = 1.0$)</figcaption>
+    </figure>
+    </div>
+
+    <!-- 2.2 Hybrids -->
+    <h3 style="margin-top:18px">Part 2.2: Hybrid Images</h3>
+    <p class="desc">
+    This section builds <em>hybrid images</em>—single pictures that flip interpretation with viewing distance, following Oliva, Torralba, and Schyns 
+    (SIGGRAPH 2006). Up close, the visual system is sensitive to fine detail, so the <em>high frequencies</em> dominate; from afar, 
+    only the smooth, <em>low-frequency</em> content remains. We exploit this by low-passing one image and high-passing another, then summing them so 
+    different images can be seen at different distances.
+    </p>
+
+    <p class="desc">
+    I first align the two inputs, pick the frequency cutoffs, and build the bands:
+    \(\mathrm{LP}_{\sigma_\ell}(A) = G_{\sigma_\ell} * A\) and
+    \(\mathrm{HP}_{\sigma_h}(B) = B - G_{\sigma_h} * B\).
+    The hybrid is then
+    \(I_{\text{hybrid}} = \mathrm{LP}_{\sigma_\ell}(A) + \mathrm{HP}_{\sigma_h}(B)\).
+    Below I show two examples: Derek + Nutmeg and Hamster + Owl.
+    </p>
+
+    <h4 style="margin:12px 0">Derek + Nutmeg</h4>
+    <div class="grid p22-grid">
+      <figure class="tile"><img src="./media/DerekPicture.jpg" alt="Derek"><figcaption class="cap">Derek (low)</figcaption></figure>
+      <figure class="tile"><img src="./media/nutmeg.jpg" alt="Nutmeg"><figcaption class="cap">Nutmeg (high)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_cat_person_hybrid.png" alt="Hybrid Derek + Nutmeg"><figcaption class="cap">Hybrid: Derek + Nutmeg</figcaption></figure>
+    </div>
+
+    <h4 style="margin:12px 0">Hamster + Owl</h4>
+    <div class="grid p22-grid">
+      <figure class="tile"><img src="./media/hamster.jpg" alt="Derek"><figcaption class="cap">Hamster (low)</figcaption></figure>
+      <figure class="tile"><img src="./media/owl.jpg" alt="Nutmeg"><figcaption class="cap">Owl (high)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_hamster_owl_hybrid.png" alt="Hybrid Derek + Nutmeg"><figcaption class="cap">Hybrid: Hamster + Owl</figcaption></figure>
+    </div>
+
+    <h4 style="margin:12px 0">Dog + Cat (Detailed)</h4>
+    <p class="explanation" style="margin:10px 0 6px">
+    For my <em>dog + cat</em> hybrid, I set <strong>A = dog</strong> (the low-frequency source) and <strong>B = cat</strong> (the high-frequency source). After aligning the images, I formed
+    \(\mathrm{LP}_{\sigma_\ell}(A) = G_{\sigma_\ell} * A\) with \(\sigma_\ell = 8.0\) and
+    \(\mathrm{HP}_{\sigma_h}(B) = B - G_{\sigma_h} * B\) with \(\sigma_h = 7.0\).
+    These cutoffs were chosen empirically. The final image is
+    \(I_{\text{hybrid}} = \mathrm{LP}_{8.0}(A) + \mathrm{HP}_{7.0}(B)\) . I also saved the log-magnitude, centered FFTs of the inputs, the filtered components, and the hybrid: \(\mathrm{LP}(A)\) concentrates energy near the origin (low frequencies), \(\mathrm{HP}(B)\) occupies the outer bands (high frequencies), and the hybrid combines both—so up close the cat dominates, while at a distance the dog remains.
+    </p>
+    <div class="grid p12-grid">
+      <figure class="tile"><img src="./media/dog.jpg" alt="Derek"><figcaption class="cap">Dog (low)</figcaption></figure>
+      <figure class="tile"><img src="./media/cat.jpg" alt="Nutmeg"><figcaption class="cap">Cat (high)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_dog_aligned.png" alt="Derek"><figcaption class="cap">Dog Aligned</figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_cat_aligned.png" alt="Nutmeg"><figcaption class="cap">Cat Aligned</figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_cat_dog_hybrid.png" alt="Hybrid Derek + Nutmeg"><figcaption class="cap">Hybrid: Dog + Cat</figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_fft_dog.png" alt="FFT Dog"><figcaption class="cap">FFT magnitude (Dog)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_fft_cat.png" alt="FFT B"><figcaption class="cap">FFT magnitude (Cat)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_fft_low.png" alt="Low A"><figcaption class="cap">FFT Low-pass (Dog) </figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_fft_high.png" alt="High B"><figcaption class="cap">FFT High-pass (Cat)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_2_fft_hybrid.png" alt="High B"><figcaption class="cap">FFT Hybrid</figcaption></figure>
+    </div>
+
+    <!-- 2.3 + 2.4 Pyramids and Blending -->
+    <h3 style="margin-top:18px">2.3 + 2.4: Gaussian/Laplacian Stacks & Multiresolution Blending</h3>
+    <p class="desc">
+    A <em>stack</em> keeps every level at the original H×W resolution. I first build a Gaussian stack 
+    \(G^0 = I,\; G^{\ell+1} = G_{\sigma_\ell} * G^\ell\) (increasing \(\sigma\) per level, no subsampling). From that I form a Laplacian stack 
+    by band-passing adjacent levels: \(L^\ell = G^\ell - G^{\ell+1}\) for all but the last, and keep the coarsest residual \(L^{L-1} = G^{L-1}\). 
+    I implemented this from scratch using separable Gaussians and 2D convolution. 
+    For blending, I also build a Gaussian stack of the mask \(M\); at each level I mix bands \(S^\ell = L_A^\ell (1 - M^\ell) + L_B^\ell M^\ell\), 
+    then reconstruct the blended image by summing all \(S^\ell\).
+    </p>
+
+    <h4 style="margin:8px 0">Orange + Apple Blend</h4>
+    <p class="desc">
+    The “Oraple” is a classic multiresolution blend that fuses an orange and an apple into a single seamless image. 
+    I build Gaussian/Laplacian stacks for both sources and a Gaussian stack for a half-and-half mask, blend the corresponding frequency bands level-by-level, and then reconstruct the image.
+    </p>
+
+    <div class="grid">
+      <figure class="tile"><img src="./media/orange.jpeg" alt="3.42l"><figcaption class="cap">Orange</figcaption></figure>
+      <figure class="tile"><img src="./media/apple.jpeg" alt="3.42l"><figcaption class="cap">Apple</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_l.png" alt="3.42l"><figcaption class="cap">Oraple (Orange + Apple Blend)</figcaption></figure>
+    </div>
+
+    <h4 style="margin:12px 0">Orange + Apple: Recreating Fig. 3.42 (a)–(l)</h4>
+    <p class="desc">
+    This grid breaks down the multiresolution blend across levels: <strong>A = apple</strong> and <strong>B = orange</strong>, 
+    with the mask applied as \(M^\ell\) to A and \((1 - M^\ell)\) to B. Rows (a–i) show representative fine → coarse levels; within each row the columns are: 
+    apple’s band \(L_A^\ell \cdot M^\ell\), orange’s band \(L_B^\ell \cdot (1 - M^\ell)\), and their sum \(S^\ell\). Panel (j) is the apple-only 
+    reconstruction (sum of all apple bands, including the residual) and (k) is the orange-only reconstruction. Panel (l) is the final “Oraple,” obtained 
+    by adding (j) and (k).
+    </p>
+    <div class="grid">
+      <figure class="tile"><img src="./media/2_4_oraple_a.png" alt="3.42a"><figcaption class="cap">(a)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_b.png" alt="3.42b"><figcaption class="cap">(b)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_c.png" alt="3.42c"><figcaption class="cap">(c)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_d.png" alt="3.42d"><figcaption class="cap">(d)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_e.png" alt="3.42e"><figcaption class="cap">(e)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_f.png" alt="3.42f"><figcaption class="cap">(f)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_g.png" alt="3.42g"><figcaption class="cap">(g)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_h.png" alt="3.42h"><figcaption class="cap">(h)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_i.png" alt="3.42i"><figcaption class="cap">(i)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_j.png" alt="3.42j"><figcaption class="cap">(j)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_k.png" alt="3.42k"><figcaption class="cap">(k)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_oraple_l.png" alt="3.42l"><figcaption class="cap">(l)</figcaption></figure>
+    </div>
+
+    <h4 style="margin:8px 0">Horizontal Mask: City + Sea Blend</h4>
+    <p class="desc">
+    For the City + Sea blend, I use a horizontal mask that is 1 in the top half and 0 in the bottom half. At each stack level \(\ell\), the blend is
+    \(S^\ell = L_{\text{city}}^\ell \cdot M^\ell + L_{\text{sea}}^\ell \cdot (1 - M^\ell)\),
+    and the final image is the sum over levels.
+    </p>
+    <div class="grid cols-2 city-sea-grid">
+      <figure class="tile"><img src="./media/city.jpg" alt="3.42l"><figcaption class="cap">City (Top)</figcaption></figure>
+      <figure class="tile"><img src="./media/sea.jpg" alt="3.42l"><figcaption class="cap">Sea (Bottom)</figcaption></figure>
+      <div class="grid snug" style="grid-column:1/-1">
+        <figure class="tile snug"><img src="./media/2_4_sea_city.png" alt="3.42l"><figcaption class="cap">City + Sea Blend</figcaption></figure>
+      </div>
+    </div>
+
+    <h4 style="margin:8px 0">Irregular Mask (Circular): Cat + Sparkles Blend</h4>
+    <p class="desc">
+    For the Cat + Sparkles blend, I use an irregular <em>circular</em> mask: it is 1 inside the circle to reveal sparkles and 0 outside 
+    to keep the cat. At level \(\ell\), the blend is \(S^\ell = L_{\text{sparkles}}^\ell \cdot M^\ell + L_{\text{cat}}^\ell \cdot (1 - M^\ell)\),
+    and the final image is the sum over levels. 
+    </p>
+    <div class="grid cols-2">
+      <figure class="tile"><img src="./media/2_4_cat_sq.jpg" alt="3.42l"><figcaption class="cap">Cat</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_sparkle_sq.jpg" alt="3.42l"><figcaption class="cap">Sparkles</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_circle_mask.jpg" alt="3.42l"><figcaption class="cap">Irregular Mask (Circular)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_l.png" alt="3.42l"><figcaption class="cap">Cat + Sparkles Blend</figcaption></figure>
+    </div>
+
+    <h4 style="margin:12px 0">Cat + Sparkles: Recreating Fig. 3.42 (a)–(l)</h4>
+    <p class="desc"> This grid visualizes the cat + sparkles blend across levels: <strong>A = sparkles</strong>, 
+        <strong>B = cat</strong>, with the circular mask applied as \(M^\ell\) to A and \((1 - M^\ell)\) to B. Rows (a–i) show 
+        representative fine → coarse levels; within each row the three columns are: sparkles’ band \(L_A^\ell \cdot M^\ell\), 
+        cat’s band \(L_B^\ell \cdot (1 - M^\ell)\), and their sum \(S^\ell\). Panel (j) is the sparkles-only reconstruction 
+        (sum of all A bands including the residual), (k) is the cat-only reconstruction, and (l) is the final composite obtained by adding (j) and (k). 
+    </p>
+    <div class="grid">
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_a.png" alt="3.42a"><figcaption class="cap">(a)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_b.png" alt="3.42b"><figcaption class="cap">(b)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_c.png" alt="3.42c"><figcaption class="cap">(c)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_d.png" alt="3.42d"><figcaption class="cap">(d)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_e.png" alt="3.42e"><figcaption class="cap">(e)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_f.png" alt="3.42f"><figcaption class="cap">(f)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_g.png" alt="3.42g"><figcaption class="cap">(g)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_h.png" alt="3.42h"><figcaption class="cap">(h)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_i.png" alt="3.42i"><figcaption class="cap">(i)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_j.png" alt="3.42j"><figcaption class="cap">(j)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_k.png" alt="3.42k"><figcaption class="cap">(k)</figcaption></figure>
+      <figure class="tile"><img src="./media/2_4_cat_sparkle_l.png" alt="3.42l"><figcaption class="cap">(l)</figcaption></figure>
+    </div>
+
+  </section>
+
+  <!-- Contact -->
+  <section class="contact">
+    <a href="mailto:lenci.ni@berkeley.edu?subject=CS180%20Portfolio%20Inquiry">Contact Me</a>
+  </section>
+</div>
+</body>
+</html>
