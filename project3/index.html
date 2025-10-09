@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Project 3 · Image Warping & Mosaicing</title>
+
+  <!-- MathJax for equations -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [["$","$"],["\\(","\\)"]] } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    :root{
+      --bg: #f7f7f9; --surface:#fff; --ink:#111827; --muted:#6b7280;
+      --border:#e5e7eb; --accent:#2563eb; --radius-lg:16px; --radius-sm:10px;
+      --shadow:0 8px 30px rgba(0,0,0,.05); --gap:20px; --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font); -webkit-font-smoothing:antialiased; line-height:1.6}
+    a{color:var(--accent); text-decoration:none}
+    a:hover{text-decoration:underline}
+    .container{max-width:1100px; margin:32px auto 64px; padding:0 20px}
+
+    .back{display:inline-block; padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; color:var(--ink); text-decoration:none; box-shadow:var(--shadow)}
+
+    header{margin:24px 0 10px}
+    h1{margin:8px 0 6px; font-size:clamp(28px,4.5vw,40px); font-weight:700}
+    .meta{margin-top:6px; color:var(--muted); font-weight:600; font-size:14px}
+
+    .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); padding:24px; margin-top:20px}
+    .card h2{margin:0 0 12px; font-size:clamp(18px,2.5vw,24px)}
+
+    .desc,.explanation{margin:8px 0}
+    .explanation{color:var(--ink)}
+
+    .tile{background:#fafafb; border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px}
+
+    .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--gap); margin-top:18px}
+    .grid.cols-2{grid-template-columns:repeat(2,minmax(340px,1fr)); gap:28px}
+    .grid.cols-3{grid-template-columns:repeat(3, minmax(220px,1fr)); gap:18px}
+    .grid.cols-4{grid-template-columns:repeat(4, minmax(140px,1fr)); gap:12px}
+
+    .tile img{display:block; width:100%; height:auto; border-radius:8px}
+    .cap{text-align:center; color:var(--muted); font-size:14px; margin-top:8px; line-height:1.4}
+    .cap small{display:block; margin-top:4px; color:#4b5563}
+    .cap code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12.5px; background:#f3f4f6; padding:2px 6px; border-radius:6px}
+
+    pre{background:#0b1220; color:#e5e7eb; padding:16px; border-radius:12px; overflow:auto; border:1px solid #0f172a; box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+    code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:13px}
+
+    /* Project-3 specific helpers */
+    .pair{grid-template-columns:repeat(2, minmax(260px,1fr)); gap:20px}
+    .triplet{grid-template-columns:repeat(3, minmax(220px,1fr)); gap:18px}
+    .snug{grid-template-columns:max-content; justify-content:center}
+
+  /* A.1: make the three-by-three images large but prevent overflow (match Project 2 sizing pattern) */
+  /* Use a smaller min column so three columns fit inside the 1100px container, and tighten gap */
+  #a1 .triplet { grid-template-columns: repeat(3, minmax(300px, 1fr)); gap: 8px; }
+  #a1 .triplet .tile { padding: 6px; }
+  /* Keep images large but bounded to avoid overflow */
+  #a1 .triplet .tile img { max-height: 520px; width: 100%; height: auto; display: block; margin: 0; }
+
+  /* A.2: correspondence tables - scoped, monospace numbers, right-aligned for easy copy/paste */
+  #a2 .grid.cols-2 .tile table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+  }
+  #a2 .grid.cols-2 .tile th {
+    text-align: center;
+    padding: 8px 10px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+  }
+  #a2 .grid.cols-2 .tile td {
+    text-align: center;
+    padding: 8px 10px;
+    border-bottom: 1px solid #f3f4f6;
+    white-space: nowrap;
+  }
+  #a2 .grid.cols-2 .tile tbody tr:nth-child(even){ background: #fbfbfc }
+  #a2 .grid.cols-2 .tile tbody tr:nth-child(odd){ background: #fff }
+  #a2 .grid.cols-2 .tile { padding: 12px }
+
+  /* A.2: two previews on the same row; third visual spans full width below */
+  #a2 .grid.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+  #a2 .grid.cols-3 .tile img { width:100%; height:auto; display:block; }
+  #a2 .grid.cols-3 .tile:nth-child(3) { grid-column: 1 / -1; }
+
+  /* A.4: per-set layout — three sources in one row, mosaic spans full width below */
+  #a4 .a4-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  #a4 .a4-grid .tile.mosaic { grid-column: 1 / -1; }
+
+    .badge{display:inline-block; font-size:12px; color:#374151; background:#EEF2FF; border:1px solid #E0E7FF; padding:3px 8px; border-radius:999px; margin-right:8px}
+
+    @media (max-width:900px){ .grid{grid-template-columns:repeat(2,1fr)} .grid.cols-2{grid-template-columns:1fr; gap:20px} }
+    @media (max-width:600px){ .grid{grid-template-columns:1fr} }
+
+    .contact{text-align:center; margin-top:40px; padding:24px; border-top:1px solid var(--border); color:var(--muted); font-size:14px}
+    .contact a{display:inline-block; margin-top:8px; padding:10px 16px; background:var(--accent); color:#fff; border-radius:8px; text-decoration:none; font-weight:600; transition:background .15s ease}
+    .contact a:hover{background:#1e4fcf}
+    /* Simple subsection subtitle styling */
+    .subhead{margin:14px 0 6px; font-weight:700; font-size:16px; color:#1f2937}
+  </style>
+</head>
+<body>
+<div class="container">
+  <a class="back" href="../index.html">← Back to Home</a>
+
+  <header>
+    <h1>Project 3: Image Warping and Mosaicing</h1>
+    <div class="meta">Oct 2025 · CS180/280A</div>
+  </header>
+
+  <!-- Overview -->
+  <section class="card" id="overview">
+    <h2>Overview</h2>
+    <p>
+      TODO.
+    </p>
+  </section>
+
+  <!-- A.1 Shoot the Pictures -->
+  <section class="card" id="a1">
+    <h2>A.1 · Shoot the Pictures</h2>
+    <p class="desc">
+      All photos were taken on my phone at 1×. To approximate a fixed center of projection, I steadied the phone near the lens with my left hand and rotated it about its vertical axis with my right, capturing frames one after another. This kept the camera’s position effectively fixed while I moved through the sequence, producing image pairs that satisfy the homography assumption with roughly 40–70% overlap.
+    </p>
+
+    <h3 class="subhead">Set 1</h3>
+    <div class="grid triplet">
+      <figure class="tile"><img src="./media/imgset1_left.jpg" alt="Set 1 Left"><figcaption class="cap">Left</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset1_middle.jpg" alt="Set 1 Middle"><figcaption class="cap">Middle</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset1_right.jpg" alt="Set 1 Right"><figcaption class="cap">Right</figcaption></figure>
+    </div>
+
+    <h3 class="subhead">Set 2</h3>
+    <div class="grid triplet">
+      <figure class="tile"><img src="./media/imgset2_left.jpg" alt="Set 2 Left"><figcaption class="cap">Left</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset2_middle.jpg" alt="Set 2 Middle"><figcaption class="cap">Middle</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset2_right.jpg" alt="Set 2 Right"><figcaption class="cap">Right</figcaption></figure>
+    </div>
+
+    <h3 class="subhead">Set 3</h3>
+    <div class="grid triplet">
+      <figure class="tile"><img src="./media/imgset3_left.jpg" alt="Set 3 Left"><figcaption class="cap">Left</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset3_middle.jpg" alt="Set 3 Middle"><figcaption class="cap">Middle</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset3_right.jpg" alt="Set 3 Right"><figcaption class="cap">Right</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- A.2 Recover Homographies -->
+  <section class="card" id="a2">
+    <h2>A.2 · Recover Homographies</h2>
+    <p class="desc">
+      A homography is a projective transformation that maps points from one image plane to another, assuming both images capture the same planar surface (or were taken by rotating the camera about a fixed center). Mathematically, it is defined as $\mathbf{p}'\,\sim\,H\,\mathbf{p}$, where $H$ is a $3\times 3$ matrix with 8 degrees of freedom (the last entry can be fixed to 1). By selecting at least four pairs of corresponding points — for instance, 8 points from Image A and their matching 8 points from Image B — we can solve for $H$ using a linear least-squares system. Once $H$ is known, it describes how to warp one image so that it aligns with the other. Correspondences are marked with red “x” overlays.
+    </p>
+
+    <div class="grid cols-3">
+      <figure class="tile"><img src="./media/imgset1_left_pts.png" alt="Corr L"><figcaption class="cap">Correspondences on Image A (Left)</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset1_middle_pts.png" alt="Corr R"><figcaption class="cap">Correspondences on Image B (Middle)</figcaption></figure>
+    </div>
+
+
+    <!-- Correspondence tables: Image A (left) and Image B (right) -->
+      <div class="grid cols-2" style="margin-top:12px">
+        <figure class="tile">
+          <figcaption class="cap"><strong>Image A</strong></figcaption>
+          <table>
+            <thead>
+              <tr>
+                <th>x</th>
+                <th>y</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>2423.69354839</td><td>620.6016129</td></tr>
+              <tr><td>3918.85483871</td><td>501.56935484</td></tr>
+              <tr><td>2446.91935484</td><td>1468.34354839</td></tr>
+              <tr><td>3936.27419355</td><td>1514.79516129</td></tr>
+              <tr><td>1628.20967742</td><td>643.82741935</td></tr>
+              <tr><td>2237.88709677</td><td>597.37580645</td></tr>
+              <tr><td>2258.20967742</td><td>1590.27903226</td></tr>
+              <tr><td>2264.01612903</td><td>1973.50483871</td></tr>
+            </tbody>
+          </table>
+        </figure>
+
+        <figure class="tile">
+          <figcaption class="cap"><strong>Image B</strong></figcaption>
+          <table>
+            <thead>
+              <tr>
+                <th>x</th>
+                <th>y</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1114.33870968</td><td>611.89193548</td></tr>
+              <tr><td>2444.01612903</td><td>617.6983871</td></tr>
+              <tr><td>1131.75806452</td><td>1506.08548387</td></tr>
+              <tr><td>2438.20967742</td><td>1488.66612903</td></tr>
+              <tr><td>138.85483871</td><td>565.44032258</td></tr>
+              <tr><td>905.30645161</td><td>571.24677419</td></tr>
+              <tr><td>919.82258065</td><td>1636.73064516</td></tr>
+              <tr><td>916.91935484</td><td>2046.08548387</td></tr>
+            </tbody>
+          </table>
+        </figure>
+      </div>
+
+    <p class="explanation" style="margin-top:10px">
+      I used eight point correspondences. Each matching pair from the first and second images contributes two linear equations under a 3×3 homography. After fixing the overall scale (setting the bottom‑right entry to 1), the homography has eight free parameters. With eight pairs, the system is overdetermined and I estimate the parameters with least squares, which is far more stable than using only four pairs.
+    </p>
+
+    <div class="explanation" style="margin-top:8px; overflow:auto">
+      $$
+      A = \begin{bmatrix}
+      2423.6 & 620.6 & 1.0 & 0.0 & 0.0 & 0.0 & -2700815.5 & -691560.4 \\
+      0.0 & 0.0 & 0.0 & 2423.6 & 620.6 & 1.0 & -1483038.5 & -379741.1 \\
+      3918.8 & 501.5 & 1.0 & 0.0 & 0.0 & 0.0 & -9577744.4 & -1225843.5 \\
+      0.0 & 0.0 & 0.0 & 3918.8 & 501.5 & 1.0 & -2420670.3 & -309818.5 \\
+      2446.9 & 1468.3 & 1.0 & 0.0 & 0.0 & 0.0 & -2769320.7 & -1661809.6 \\
+      0.0 & 0.0 & 0.0 & 2446.9 & 1468.3 & 1.0 & -3685269.7 & -2211450.9 \\
+      3936.2 & 1514.7 & 1.0 & 0.0 & 0.0 & 0.0 & -9597461.8 & -3693388.2 \\
+      0.0 & 0.0 & 0.0 & 3936.2 & 1514.7 & 1.0 & -5859798.0 & -2255024.2 \\
+      1628.2 & 643.8 & 1.0 & 0.0 & 0.0 & 0.0 & -226084.7 & -89398.5 \\
+      0.0 & 0.0 & 0.0 & 1628.2 & 643.8 & 1.0 & -920655.4 & -364045.9 \\
+      2237.8 & 597.3 & 1.0 & 0.0 & 0.0 & 0.0 & -2025973.6 & -540808.1 \\
+      0.0 & 0.0 & 0.0 & 2237.8 & 597.3 & 1.0 & -1278385.7 & -341249.0 \\
+      2258.2 & 1590.2 & 1.0 & 0.0 & 0.0 & 0.0 & -2077152.2 & -1462774.5 \\
+      0.0 & 0.0 & 0.0 & 2258.2 & 1590.2 & 1.0 & -3696080.9 & -2602858.4 \\
+      2264.0 & 1973.5 & 1.0 & 0.0 & 0.0 & 0.0 & -2075920.2 & -1809544.7 \\
+      0.0 & 0.0 & 0.0 & 2264.0 & 1973.5 & 1.0 & -4632370.5 & -4037959.6 \\
+      \end{bmatrix},\quad
+      h = \begin{bmatrix} h_1\\ h_2\\ h_3\\ h_4\\ h_5\\ h_6\\ h_7\\ h_8 \end{bmatrix},\quad
+      b = \begin{bmatrix}
+      1114.3 \\
+      611.8 \\
+      2444.0 \\
+      617.6 \\
+      1131.7 \\
+      1506.0 \\
+      2438.2 \\
+      1488.6 \\
+      138.8 \\
+      565.4 \\
+      905.3 \\
+      571.2 \\
+      919.8 \\
+      1636.7 \\
+      916.9 \\
+      2046.0 \\
+      \end{bmatrix},\quad Ah = b
+      $$
+    </div>
+
+    <p class="explanation" style="margin-top:8px">
+      After solving the overdetermined system in the least‑squares sense, the recovered homography is:
+    </p>
+    <div class="explanation" style="margin-top:0">
+      $$
+      H = \begin{bmatrix}
+      1.94523923\times 10^{0} & -8.31127001\times 10^{-3} & -2.97059608\times 10^{3} \\
+      2.75827281\times 10^{-1} & 1.65306099\times 10^{0} & -7.36056377\times 10^{2} \\
+      2.28676114\times 10^{-4} & 1.10383243\times 10^{-5} & 1.00000000\times 10^{0}
+      \end{bmatrix}
+      $$
+    </div>
+
+    <figure class="tile" style="margin-top:10px">
+      <img src="./media/imgset1_left_warped_bi.png" alt="Warped result (Image A onto Image B)"/>
+      <figcaption class="cap">Warped result — Image A mapped onto Image B’s plane (bilinear interpolation).</figcaption>
+    </figure>
+
+  </section>
+
+  <!-- A.3 Warp the Images -->
+  <section class="card" id="a3">
+    <h2>A.3 · Warp the Images</h2>
+    <p class="explanation">
+      With a homography $H$, I render via inverse warping: for each output pixel, map through $H^{-1}$ to a sub-pixel location in the source and sample there. Canvas bounds come from projecting source corners; out-of-bounds are masked with an alpha channel. Pixel coordinates are treated as centered.
+    </p>
+    <p class="explanation"><strong>Nearest neighbor.</strong> For each back-projected coordinate $(x_s, y_s)$, round to the nearest integer pixel index and copy that value.</p>
+    <p class="explanation"><strong>Bilinear.</strong> For each $(x_s, y_s)$, take the weighted average of the four surrounding pixels using the fractional offsets as weights.</p>
+
+    <div class="grid cols-3">
+      <figure class="tile"><img src="./media/painting.jpg" alt="src"><figcaption class="cap">Source image</figcaption></figure>
+      <figure class="tile"><img src="./media/img1_rectification_nn.png" alt="nn"><figcaption class="cap">Nearest neighbor result</figcaption></figure>
+      <figure class="tile"><img src="./media/img1_rectification_bi.png" alt="bil"><figcaption class="cap">Bilinear result</figcaption></figure>
+    </div>
+
+    <div class="grid cols-3">
+      <figure class="tile"><img src="./media/painting2.jpg" alt="src"><figcaption class="cap">Source image</figcaption></figure>
+      <figure class="tile"><img src="./media/img2_rectification_nn.png" alt="nn"><figcaption class="cap">Nearest neighbor result</figcaption></figure>
+      <figure class="tile"><img src="./media/img2_rectification_bi.png" alt="bil"><figcaption class="cap">Bilinear result</figcaption></figure>
+    </div>
+
+  <p class="explanation">At this resolution, nearest neighbor and bilinear produced similarly smooth, visually reasonable results. Bilinear averages the four neighboring samples, which can soften jagged edges introduced by sub-pixel resampling, while nearest neighbor simply picks the closest pixel and can introduce “stair-step” artifacts—differences that become more apparent on lower-resolution or high-contrast content. In runtime, nearest neighbor was faster: warps that took ~30 s with nearest neighbor took ~50 s with bilinear.</p>
+
+  </section>
+
+  <!-- A.4 Blend into a Mosaic -->
+  <section class="card" id="a4">
+    <h2>A.4 · Blend the Images into a Mosaic</h2>
+
+    <p class="explanation">To create the mosaics, I first determined the size of the output canvas by projecting the corner coordinates of each image through its corresponding homography. This establishes the bounding box that fully contains all warped images. Using these bounds, I warped each input image into the shared coordinate frame with inverse warping, so that every output pixel maps back to its source location. Alongside each warped image, I generated an alpha mask indicating which pixels contained valid content, ensuring that empty or uncovered regions in the canvas were properly ignored.</p>
+
+    <p class="explanation">Each image was warped using bilinear interpolation, which computes smooth pixel values from neighboring samples and avoids aliasing or blockiness along slanted edges. I also applied a geometric offset to translate all warped images into positive coordinate space, allowing them to align correctly within the final mosaic.</p>
+
+    <p class="explanation">Finally, I blended the warped images together using weighted averaging. To compute the blending weights, I applied a distance transform to each alpha mask so that pixels near image centers receive higher weights while those near the borders fade smoothly to zero. This spatial weighting acts as a simple feathering method, softening boundaries and reducing visible seams between overlapping regions. The result is a continuous mosaic that maintains smooth transitions and consistent color across the combined images.</p>
+
+    <!-- Set 1 -->
+    <h3 class="subhead">Set 1</h3>
+    <div class="grid a4-grid">
+      <figure class="tile"><img src="./media/imgset1_left.jpg" alt="Set 1 Left"><figcaption class="cap">Left</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset1_middle.jpg" alt="Set 1 Middle"><figcaption class="cap">Middle</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset1_right.jpg" alt="Set 1 Right"><figcaption class="cap">Right</figcaption></figure>
+      <figure class="tile mosaic"><img src="./media/imgset1_mosaic_3_imgs.png" alt="Set 1 Mosaic"><figcaption class="cap">Mosaic</figcaption></figure>
+    </div>
+
+    <!-- Set 2 -->
+    <h3 class="subhead">Set 2</h3>
+    <div class="grid a4-grid" style="margin-top:16px">
+      <figure class="tile"><img src="./media/imgset2_left.jpg" alt="Set 2 Left"><figcaption class="cap">Left</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset2_middle.jpg" alt="Set 2 Middle"><figcaption class="cap">Middle</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset2_right.jpg" alt="Set 2 Right"><figcaption class="cap">Right</figcaption></figure>
+      <figure class="tile mosaic"><img src="./media/imgset2_mosaic_3_imgs.png" alt="Set 2 Mosaic"><figcaption class="cap">Mosaic</figcaption></figure>
+    </div>
+
+    <!-- Set 3 -->
+    <h3 class="subhead">Set 3</h3>
+    <div class="grid a4-grid" style="margin-top:16px">
+      <figure class="tile"><img src="./media/imgset3_left.jpg" alt="Set 3 Left"><figcaption class="cap">Left</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset3_middle.jpg" alt="Set 3 Middle"><figcaption class="cap">Middle</figcaption></figure>
+      <figure class="tile"><img src="./media/imgset3_right.jpg" alt="Set 3 Right"><figcaption class="cap">Right</figcaption></figure>
+      <figure class="tile mosaic"><img src="./media/imgset3_mosaic_3_imgs.png" alt="Set 3 Mosaic"><figcaption class="cap">Mosaic</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <section class="contact">
+    <a href="mailto:lenci.ni@berkeley.edu?subject=CS180%20Portfolio%20Inquiry">Contact Me</a>
+  </section>
+</div>
+</body>
+</html>
