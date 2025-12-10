@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Project 5 · Fun with Diffusion Models</title>
+
+  <!-- MathJax for equations -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [["$","$"],["\\(","\\)"]] } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+  <style>
+    :root{
+      --bg: #f7f7f9; --surface:#fff; --ink:#111827; --muted:#6b7280;
+      --border:#e5e7eb; --accent:#2563eb; --radius-lg:16px; --radius-sm:10px;
+      --shadow:0 8px 30px rgba(0,0,0,.05); --gap:20px; --font: ui-sans-serif, system    <h6 class="subhead">Illusion 1: Castle / Lighthouse</h6>
+    <p class="desc"><strong>Prompts:</strong> "a castle tower drawn in thin black line art" (upright) / "a lighthouse drawn in thin black line art" (flipped)</p>
+    <div class="grid cols-2">
+      <figure class="tile"><img src="./media/parta/part1/1_8_castle_upright.png" alt="Castle Tower Upright"><figcaption class="cap">Castle (Upright)</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_8_lighthouse_flipped.png" alt="Lighthouse Flipped"><figcaption class="cap">Lighthouse (Flipped)</figcaption></figure>
+    </div>
+    
+    <h6 class="subhead">Illusion 2: Forest / Mountain Lake</h6>
+    <p class="desc"><strong>Prompts:</strong> "a symmetric ink drawing of a forest with mirrored trees" (upright) / "an upside-down ink drawing of mountains reflected in water" (flipped)</p>
+    <div class="grid cols-2">
+      <figure class="tile"><img src="./media/parta/part1/1_8_forest_upright.png" alt="Forest Upright"><figcaption class="cap">Forest (Upright)</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_8_mountain_flipped.png" alt="Mountain Lake Flipped"><figcaption class="cap">Mountain (Flipped)</figcaption></figure>
+    </div>
+
+    <h4 class="subhead">1.9 Hybrid Images</h4>ystem, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0; background:var(--bg); color:var(--ink); font-family:var(--font); -webkit-font-smoothing:antialiased; line-height:1.6}
+    a{color:var(--accent); text-decoration:none}
+    a:hover{text-decoration:underline}
+    .container{max-width:1100px; margin:32px auto 64px; padding:0 20px}
+
+    .back{display:inline-block; padding:8px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; color:var(--ink); text-decoration:none; box-shadow:var(--shadow)}
+
+    header{margin:24px 0 10px}
+    h1{margin:8px 0 6px; font-size:clamp(28px,4.5vw,40px); font-weight:700}
+    .meta{margin-top:6px; color:var(--muted); font-weight:600; font-size:14px}
+
+    .card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); box-shadow:var(--shadow); padding:24px; margin-top:20px}
+    .card h2{margin:0 0 12px; font-size:clamp(18px,2.5vw,24px)}
+
+    .desc,.explanation{margin:8px 0}
+    .explanation{color:var(--ink)}
+
+    .tile{background:#fafafb; border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px}
+
+    .grid{display:grid; grid-template-columns:repeat(3,1fr); gap:var(--gap); margin-top:18px}
+    .grid.cols-2{grid-template-columns:repeat(2,minmax(340px,1fr)); gap:28px}
+    .grid.cols-3{grid-template-columns:repeat(3, minmax(220px,1fr)); gap:18px}
+    .grid.cols-4{grid-template-columns:repeat(4, minmax(140px,1fr)); gap:12px}
+
+    .tile img{display:block; width:100%; height:auto; border-radius:8px}
+    .cap{text-align:center; color:var(--muted); font-size:14px; margin-top:8px; line-height:1.4}
+    .cap small{display:block; margin-top:4px; color:#4b5563}
+    .cap code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:12.5px; background:#f3f4f6; padding:2px 6px; border-radius:6px}
+
+    pre{background:#0b1220; color:#e5e7eb; padding:16px; border-radius:12px; overflow:auto; border:1px solid #0f172a; box-shadow:inset 0 0 0 1px rgba(255,255,255,.02)}
+    code{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size:13px}
+
+    .badge{display:inline-block; font-size:12px; color:#374151; background:#EEF2FF; border:1px solid #E0E7FF; padding:3px 8px; border-radius:999px; margin-right:8px}
+
+    @media (max-width:900px){ .grid{grid-template-columns:repeat(2,1fr)} .grid.cols-2{grid-template-columns:1fr; gap:20px} }
+    @media (max-width:600px){ .grid{grid-template-columns:1fr} }
+
+    .contact{text-align:center; margin-top:40px; padding:24px; border-top:1px solid var(--border); color:var(--muted); font-size:14px}
+    .contact a{display:inline-block; margin-top:8px; padding:10px 16px; background:var(--accent); color:#fff; border-radius:8px; text-decoration:none; font-weight:600; transition:background .15s ease}
+    .contact a:hover{background:#1e4fcf}
+    
+    .subhead{margin:14px 0 6px; font-weight:700; font-size:16px; color:#1f2937}
+  </style>
+</head>
+<body>
+<div class="container">
+  <a class="back" href="../index.html">← Back to Home</a>
+
+  <header>
+    <h1>Project 5: Fun with Diffusion Models</h1>
+    <div class="meta">CS180</div>
+  </header>
+
+  <section class="card">
+    <h2>Overview</h2>
+    <p>This project explores the power of diffusion models...</p>
+  </section>
+
+  <!-- Part A -->
+  <section class="card" id="part-a">
+    <h2>Part A: The Power of Diffusion Models!</h2>
+    
+    <!-- Part 0 -->
+    <h3 class="subhead">Part 0: Setup</h3>
+    <p class="desc">I generated embeddings for a variety of interesting text prompts. For this part, I selected three diverse prompts to generate images with different <code>num_inference_steps</code> values to observe how the number of denoising steps affects output quality.</p>
+    
+    <p class="explanation"><strong>Random Seed:</strong> 180 (used consistently throughout all subsequent parts)</p>
+    
+    <p class="explanation"><strong>All Prompts Tested:</strong></p>
+    <ul>
+      <li>a high quality picture</li>
+      <li>a watercolor painting of a fox reading under a lantern at night</li>
+      <li>a dreamy landscape of floating islands connected by waterfalls</li>
+      <li>an ancient library hidden inside a giant tree, fantasy illustration</li>
+      <li>a magical koi fish swimming through a sky of clouds, pastel colors</li>
+      <li>a fluffy white cat in soft pastel style</li>
+      <li>a detailed lion face with sharp textured fur, photorealistic</li>
+      <li>a serene beach at sunrise, minimalistic pastel colors</li>
+      <li>a rocky coastline with crashing waves, hyper-detailed realism</li>
+      <li>a symmetric ink drawing of a forest with mirrored trees</li>
+      <li>an upside-down ink drawing of mountains reflected in water</li>
+      <li>a geometric pattern forming the shape of a cat</li>
+      <li>a geometric pattern forming the shape of a fox</li>
+      <li>a castle tower drawn in thin black line art</li>
+      <li>a lighthouse drawn in thin black line art</li>
+      <li>a smooth stone sculpture of a human skull, minimalistic lighting</li>
+      <li>a hyper-detailed roaring waterfall with sparkling mist and rock textures</li>
+      <li>a soft pastel painting of a mountain silhouette at dusk</li>
+      <li>a neon-lit futuristic cityscape with intricate glowing details</li>
+      <li>a simple charcoal sketch of an owl face, large shapes emphasized</li>
+      <li>a dense, high-detail forest with leaves, moss, and textured bark</li>
+      <li>a clean watercolor illustration of the full moon</li>
+      <li>complex brass clockwork machinery full of tiny gears and engravings</li>
+      <li>rocket ship</li>
+    </ul>
+    
+    <p class="explanation"><strong>Selected Prompts for Part 0:</strong></p>
+    <ul>
+      <li>a dreamy landscape of floating islands connected by waterfalls</li>
+      <li>a magical koi fish swimming through a sky of clouds, pastel colors</li>
+      <li>an ancient library hidden inside a giant tree, fantasy illustration</li>
+    </ul>
+    
+    <p class="explanation">Each prompt was tested with three different inference step values (20, 50, and 100 steps) to compare generation quality. With fewer steps, the model produces rougher, less detailed images, while higher step counts yield smoother, more refined results with better adherence to the text prompt. The 3×3 grid below shows how each prompt evolves across different inference steps.</p>
+    
+    <div class="grid cols-3">
+      <figure class="tile"><img src="./media/parta/part0/island_20.png" alt="Islands 20 steps"><figcaption class="cap">Floating islands<br><small>20 steps</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part0/island_50.png" alt="Islands 50 steps"><figcaption class="cap">Floating islands<br><small>50 steps</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part0/island_100.png" alt="Islands 100 steps"><figcaption class="cap">Floating islands<br><small>100 steps</small></figcaption></figure>
+
+      <figure class="tile"><img src="./media/parta/part0/koifish_20.png" alt="Koi 20 steps"><figcaption class="cap">Magical koi fish<br><small>20 steps</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part0/koifish_50.png" alt="Koi 50 steps"><figcaption class="cap">Magical koi fish<br><small>50 steps</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part0/koifish_100.png" alt="Koi 100 steps"><figcaption class="cap">Magical koi fish<br><small>100 steps</small></figcaption></figure>
+
+      <figure class="tile"><img src="./media/parta/part0/tree_20.png" alt="Library 20 steps"><figcaption class="cap">Ancient library tree<br><small>20 steps</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part0/tree_50.png" alt="Library 50 steps"><figcaption class="cap">Ancient library tree<br><small>50 steps</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part0/tree_100.png" alt="Library 100 steps"><figcaption class="cap">Ancient library tree<br><small>100 steps</small></figcaption></figure>
+    </div>
+    
+    <!-- Part 1 -->
+    <h3 class="subhead">Part 1: Sampling Loops</h3>
+    
+    <h4 class="subhead">1.1 Implementing the Forward Process</h4>
+    <p class="desc">The forward process gradually corrupts a clean image by adding scaled Gaussian noise. Given a clean image $x_0$, we compute the noisy image at timestep $t$ as:</p>
+    
+    <p class="explanation">$$x_t = \sqrt{\bar{\alpha}_t} \, x_0 + \sqrt{1 - \bar{\alpha}_t} \, \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)$$</p>
+    
+    <p class="explanation">where $\bar{\alpha}_t$ controls the noise level (close to 1 for clean images, close to 0 for pure noise). </p>
+    
+    <p class="explanation"><strong>Implementation:</strong></p>
+    <pre><code>def forward(im, t):
+  """
+  Args:
+    im : torch tensor of size (1, 3, 64, 64) representing the clean image
+    t : integer timestep
+
+  Returns:
+    im_noisy : torch tensor of size (1, 3, 64, 64) representing the noisy image at timestep t
+  """
+  with torch.no_grad():
+    alpha_bar_t = alphas_cumprod[t].to(im.device)
+    e = torch.randn_like(im)
+    im_noisy = torch.sqrt(alpha_bar_t) * im + torch.sqrt(1 - alpha_bar_t) * e
+
+  return im_noisy</code></pre>
+    
+    <p class="explanation">Below, I show the Campanile image at noise levels $t = 250$, $t = 500$, and $t = 750$, demonstrating how the forward diffusion process progressively corrupts the original image:</p>
+    
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/campanile_original.png" alt="Original Campanile"><figcaption class="cap">Original<br><small>t = 0</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_1_campanile_250.png" alt="Campanile t=250"><figcaption class="cap">Noisy Campanile<br><small>t = 250</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_1_campanile_500.png" alt="Campanile t=500"><figcaption class="cap">Noisy Campanile<br><small>t = 500</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_1_campanile_750.png" alt="Campanile t=750"><figcaption class="cap">Noisy Campanile<br><small>t = 750</small></figcaption></figure>
+    </div>
+
+    <h4 class="subhead">1.2 Classical Denoising</h4>
+    <p class="desc">Classical denoising methods like Gaussian blur filtering struggle to remove the noise added by the diffusion forward process. Below, I apply Gaussian blur to the noisy Campanile images from Part 1.1 at timesteps $t = 250, 500, 750$. The results show that simple filtering cannot effectively recover the original image structure, especially at higher noise levels.</p>
+    
+    <div class="grid cols-3">
+      <figure class="tile"><img src="./media/parta/part1/1_1_campanile_250.png" alt="Noisy t=250"><figcaption class="cap">Noisy<br><small>t = 250</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_1_campanile_500.png" alt="Noisy t=500"><figcaption class="cap">Noisy<br><small>t = 500</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_1_campanile_750.png" alt="Noisy t=750"><figcaption class="cap">Noisy<br><small>t = 750</small></figcaption></figure>
+      
+      <figure class="tile"><img src="./media/parta/part1/1_2_campanile_250.png" alt="Gaussian denoised t=250"><figcaption class="cap">Gaussian Denoised<br><small>t = 250</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_2_campanile_500.png" alt="Gaussian denoised t=500"><figcaption class="cap">Gaussian Denoised<br><small>t = 500</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_2_campanile_750.png" alt="Gaussian denoised t=750"><figcaption class="cap">Gaussian Denoised<br><small>t = 750</small></figcaption></figure>
+    </div>
+
+    <h4 class="subhead">1.3 One-Step Denoising</h4>
+    <p class="desc">We can leverage a pretrained diffusion model UNet (<code>stage_1.unet</code>) to denoise images. The UNet estimates the noise $\epsilon$ in a noisy image conditioned on timestep $t$ and a text prompt embedding. By removing the estimated noise, we recover an approximation of the original image in a single step. Below shows results for $t = 250, 500, 750$ using the prompt "a high quality picture":</p>
+    
+    <div class="grid cols-3">
+      <figure class="tile"><img src="./media/parta/part1/campanile_original.png" alt="Original"><figcaption class="cap">Original<br><small>t = 250</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/campanile_original.png" alt="Original"><figcaption class="cap">Original<br><small>t = 500</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/campanile_original.png" alt="Original"><figcaption class="cap">Original<br><small>t = 750</small></figcaption></figure>
+      
+      <figure class="tile"><img src="./media/parta/part1/1_1_campanile_250.png" alt="Noisy t=250"><figcaption class="cap">Noisy<br><small>t = 250</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_1_campanile_500.png" alt="Noisy t=500"><figcaption class="cap">Noisy<br><small>t = 500</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_1_campanile_750.png" alt="Noisy t=750"><figcaption class="cap">Noisy<br><small>t = 750</small></figcaption></figure>
+      
+      <figure class="tile"><img src="./media/parta/part1/1_3_campanile_250.png" alt="One-step denoised t=250"><figcaption class="cap">One-Step Denoised<br><small>t = 250</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_3_campanile_500.png" alt="One-step denoised t=500"><figcaption class="cap">One-Step Denoised<br><small>t = 500</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_3_campanile_750.png" alt="One-step denoised t=750"><figcaption class="cap">One-Step Denoised<br><small>t = 750</small></figcaption></figure>
+    </div>
+
+    <h4 class="subhead">1.4 Iterative Denoising</h4>
+    <p class="desc">While one-step denoising works reasonably well, diffusion models are designed to denoise iteratively. Rather than running 1000 steps (slow and expensive), we can skip steps by creating strided timesteps. Starting from $t=990$ with stride 30, we progressively denoise until reaching a clean image at $t=0$.</p>
+    
+    <p class="explanation">At each step, we interpolate between the estimated clean image $\hat{x}_0$ and the current noisy image using the DDPM update formula:</p>
+    
+    <p class="explanation">$$x_{t'} = \frac{\sqrt{\bar{\alpha}_{t'}} \cdot \beta_t}{1 - \bar{\alpha}_t} \hat{x}_0 + \frac{\sqrt{\alpha_t}(1 - \bar{\alpha}_{t'})}{1 - \bar{\alpha}_t} x_t + \text{variance}$$</p>
+    
+    <p class="explanation">where $\hat{x}_0$ is estimated from $x_t$ using the UNet's noise prediction, $\alpha_t = \bar{\alpha}_t / \bar{\alpha}_{t'}$, and $\beta_t = 1 - \alpha_t$.</p>
+    
+    <p class="explanation"><strong>Setup:</strong> Create strided timesteps starting at 990 with stride 30:</p>
+    <pre><code>strided_timesteps = list(range(990, -1, -30))
+stage_1.scheduler.set_timesteps(timesteps=strided_timesteps)</code></pre>
+    
+    <p class="explanation"><strong>Iterative Denoising Function:</strong> On the $i$-th step, we move from $t$ to $t'$ (less noisy) using the DDPM update rule:</p>
+    <pre><code>def iterative_denoise(im_noisy, i_start, prompt_embeds, timesteps, display=True):
+  image = im_noisy
+
+  with torch.no_grad():
+    for i in range(i_start, len(timesteps) - 1):
+      # Get timesteps
+      t = timesteps[i]
+      prev_t = timesteps[i+1]
+
+      # get `alpha_cumprod` and `alpha_cumprod_prev` for timestep t from `alphas_cumprod`
+      # compute `alpha`
+      # compute `beta`
+      alpha_bar_t = alphas_cumprod[t].to(device)
+      alpha_bar_prev = alphas_cumprod[prev_t].to(device)
+
+      alpha = alpha_bar_t / alpha_bar_prev
+      beta = 1.0 - alpha
+
+      image = image.to(device).half()
+      prompt_embeds = prompt_embeds.to(device).half()
+
+      # Get noise estimate
+      model_output = stage_1.unet(
+          image,
+          t,
+          encoder_hidden_states=prompt_embeds,
+          return_dict=False
+      )[0]
+
+      # Split estimate into noise and variance estimate
+      noise_est, predicted_variance = torch.split(model_output, image.shape[1], dim=1)
+
+      # compute `pred_prev_image` (x_{t'}), the DDPM estimate for the image at the
+      # next timestep, which is slightly less noisy. Use the equation 3.
+      # This is the core of DDPM
+      sqrt_alpha_bar_t = torch.sqrt(alpha_bar_t)
+      sqrt_one_minus_alpha_bar_t = torch.sqrt(1.0 - alpha_bar_t)
+
+      x0_est = (image - sqrt_one_minus_alpha_bar_t.view(1, 1, 1, 1) * noise_est) / sqrt_alpha_bar_t.view(1, 1, 1, 1)
+
+      term_1 = (torch.sqrt(alpha_bar_prev) * beta) / (1.0 - alpha_bar_t)
+      term_2 = (torch.sqrt(alpha) * (1.0 - alpha_bar_prev)) / (1.0 - alpha_bar_t)
+
+      pred_prev_image = term_1.view(1, 1, 1, 1) * x0_est + term_2.view(1, 1, 1, 1) * image
+      pred_prev_image = add_variance(predicted_variance, t, pred_prev_image)
+
+      image = pred_prev_image
+
+      if display and ((i - i_start) % 5 == 0):
+        img = (image[0].detach().cpu().permute(1, 2, 0) / 2. + 0.5).numpy()
+        print(f"{timesteps[i]}")
+        media.show_image(img)
+
+    clean = image.cpu().detach().numpy()
+
+  return clean</code></pre>
+    
+    <p class="explanation"><strong>Results:</strong> Below shows the noisy Campanile every 5th loop of denoising, gradually becoming less noisy. The final predicted clean image using iterative denoising is compared against the one-step denoising result from Part 1.3 (which looks much worse) and the Gaussian blur result from Part 1.2:</p>
+    
+    <div class="grid cols-3">
+      <figure class="tile"><img src="./media/parta/part1/1_4_campanile_90.png" alt="t=90"><figcaption class="cap">Iterative<br><small>t = 90</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_4_campanile_240.png" alt="t=240"><figcaption class="cap">Iterative<br><small>t = 240</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_4_campanile_390.png" alt="t=390"><figcaption class="cap">Iterative<br><small>t = 390</small></figcaption></figure>
+      
+      <figure class="tile"><img src="./media/parta/part1/1_4_campanile_540.png" alt="t=540"><figcaption class="cap">Iterative<br><small>t = 540</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_4_campanile_690.png" alt="t=690"><figcaption class="cap">Iterative<br><small>t = 690</small></figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/campanile_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+      
+      <figure class="tile"><img src="./media/parta/part1/1_4_iterative_denoising_final.png" alt="Final"><figcaption class="cap">Iterative Final</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_4_one_step_denoising_final.png" alt="One-step"><figcaption class="cap">One-Step</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_4_gaussian_blur_final.png" alt="Gaussian"><figcaption class="cap">Gaussian Blur</figcaption></figure>
+    </div>
+
+    <h4 class="subhead">1.5 Diffusion Model Sampling</h4>
+    <p class="desc">Beyond denoising existing images, we can generate images from scratch by denoising pure random noise. By setting <code>i_start = 0</code> and passing random noise as <code>im_noisy</code>, the iterative denoising function effectively generates new images. Below shows 5 sampled results using the prompt "a high quality picture":</p>
+    
+    <div class="grid" style="grid-template-columns:repeat(5, 1fr); gap:8px;">
+      <figure class="tile"><img src="./media/parta/part1/1_5_sample1.png" alt="Sample 1"><figcaption class="cap">Sample 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_5_sample2.png" alt="Sample 2"><figcaption class="cap">Sample 2</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_5_sample3.png" alt="Sample 3"><figcaption class="cap">Sample 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_5_sample4.png" alt="Sample 4"><figcaption class="cap">Sample 4</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_5_sample5.png" alt="Sample 5"><figcaption class="cap">Sample 5</figcaption></figure>
+    </div>
+
+    <h4 class="subhead">1.6 Classifier-Free Guidance (CFG)</h4>
+    <p class="desc">The images from Part 1.5 lack quality and coherence. Classifier-Free Guidance (CFG) dramatically improves image quality (at the expense of diversity) by computing both conditional ($\epsilon_{\text{cond}}$) and unconditional ($\epsilon_{\text{uncond}}$) noise estimates. The unconditional estimate uses an empty prompt embedding (the model was trained to predict unconditional noise for empty prompts). The CFG noise estimate combines these:</p>
+    
+    <p class="explanation">$$\epsilon = \epsilon_{\text{uncond}} + \gamma \, (\epsilon_{\text{cond}} - \epsilon_{\text{uncond}})$$</p>
+    
+    <p class="explanation">where $\gamma$ controls CFG strength. For $\gamma = 1$, we get the conditional estimate; for $\gamma > 1$, we extrapolate beyond it for much higher quality.</p>
+    
+    <p class="explanation"><strong>Setup:</strong></p>
+    <pre><code># The conditional prompt embedding
+prompt_embeds = prompt_embeds_dict['a high quality picture']
+
+# The unconditional prompt embedding
+uncond_prompt_embeds = prompt_embeds_dict['']</code></pre>
+    
+    <p class="explanation"><strong>Iterative Denoising with CFG:</strong></p>
+    <pre><code>def iterative_denoise_cfg(im_noisy, i_start, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
+  image = im_noisy
+
+  with torch.no_grad():
+    for i in range(i_start, len(timesteps) - 1):
+      # Get timesteps
+      t = timesteps[i]
+      prev_t = timesteps[i+1]
+
+      # Get `alpha_cumprod`, `alpha_cumprod_prev`, `alpha`, `beta`
+      alpha_bar_t = alphas_cumprod[t].to(device)
+      alpha_bar_prev = alphas_cumprod[prev_t].to(device)
+
+      alpha = alpha_bar_t / alpha_bar_prev
+      beta = 1.0 - alpha
+
+      image = image.to(device).half()
+      prompt_embeds = prompt_embeds.to(device).half()
+      uncond_prompt_embeds = uncond_prompt_embeds.to(device).half()
+
+      # Get cond noise estimate
+      model_output = stage_1.unet(
+          image,
+          t,
+          encoder_hidden_states=prompt_embeds,
+          return_dict=False
+      )[0]
+
+      # Get uncond noise estimate
+      uncond_model_output = stage_1.unet(
+          image,
+          t,
+          encoder_hidden_states=uncond_prompt_embeds,
+          return_dict=False
+      )[0]
+
+      # Split estimate into noise and variance estimate
+      noise_est, predicted_variance = torch.split(model_output, image.shape[1], dim=1)
+      uncond_noise_est, _ = torch.split(uncond_model_output, image.shape[1], dim=1)
+
+      # Compute the CFG noise estimate based on equation 4
+      noise_est = uncond_noise_est + scale * (noise_est - uncond_noise_est)
+
+      # Get `pred_prev_image`, the next less noisy image.
+      sqrt_alpha_bar_t = torch.sqrt(alpha_bar_t)
+      sqrt_one_minus_alpha_bar_t = torch.sqrt(1.0 - alpha_bar_t)
+
+      x0_est = (image - sqrt_one_minus_alpha_bar_t.view(1,1,1,1) * noise_est) / sqrt_alpha_bar_t.view(1,1,1,1)
+
+      term_1 = (torch.sqrt(alpha_bar_prev) * beta) / (1.0 - alpha_bar_t)
+      term_2 = (torch.sqrt(alpha) * (1.0 - alpha_bar_prev)) / (1.0 - alpha_bar_t)
+
+      pred_prev_image = term_1.view(1,1,1,1) * x0_est + term_2.view(1,1,1,1) * image
+      pred_prev_image = add_variance(predicted_variance, t, pred_prev_image)
+
+      image = pred_prev_image
+
+    clean = image.cpu().detach().numpy()
+
+  return clean</code></pre>
+    
+    <p class="explanation"><strong>Results:</strong> Below shows 5 images generated with CFG scale $\gamma = 7$ using the prompt "a high quality picture". Compared to Part 1.5, the images show improved quality.</p>
+    <div class="grid" style="grid-template-columns:repeat(5, 1fr); gap:8px;">
+      <figure class="tile"><img src="./media/parta/part1/1_6_sample1.png" alt="CFG Sample 1"><figcaption class="cap">Sample 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_6_sample2.png" alt="CFG Sample 2"><figcaption class="cap">Sample 2</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_6_sample3.png" alt="CFG Sample 3"><figcaption class="cap">Sample 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_6_sample4.png" alt="CFG Sample 4"><figcaption class="cap">Sample 4</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_6_sample5.png" alt="CFG Sample 5"><figcaption class="cap">Sample 5</figcaption></figure>
+    </div>
+
+    <h4 class="subhead">1.7 Image-to-image Translation</h4>
+    <p class="desc">By adding noise to a real image and then denoising it, we can edit existing images. More noise produces larger edits, as the diffusion model must be more creative to denoise—effectively forcing the noisy image back onto the natural image manifold. This follows the SDEdit algorithm. Below, I noise the Campanile and two test images, then denoise starting at different noise levels (indexed by starting step $i_{\text{start}} = [1, 3, 5, 7, 10, 20]$) using the prompt "a high quality photo". Lower indices = more noise = larger edits:</p>
+    
+    <h5 class="subhead">Campanile Edits</h5>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_campanile_1.png" alt="i=1"><figcaption class="cap">i = 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_campanile_3.png" alt="i=3"><figcaption class="cap">i = 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_campanile_5.png" alt="i=5"><figcaption class="cap">i = 5</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_campanile_7.png" alt="i=7"><figcaption class="cap">i = 7</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_campanile_10.png" alt="i=10"><figcaption class="cap">i = 10</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_campanile_20.png" alt="i=20"><figcaption class="cap">i = 20</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/campanile_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+    </div>
+    
+    <h5 class="subhead">Test Image 1: Dessert</h5>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_dessert_1.png" alt="i=1"><figcaption class="cap">i = 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_dessert_3.png" alt="i=3"><figcaption class="cap">i = 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_dessert_5.png" alt="i=5"><figcaption class="cap">i = 5</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_dessert_7.png" alt="i=7"><figcaption class="cap">i = 7</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_dessert_10.png" alt="i=10"><figcaption class="cap">i = 10</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_dessert_20.png" alt="i=20"><figcaption class="cap">i = 20</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_dessert_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+    </div>
+    
+    <h5 class="subhead">Test Image 2: Lake</h5>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_lake_1.png" alt="i=1"><figcaption class="cap">i = 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_lake_3.png" alt="i=3"><figcaption class="cap">i = 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_lake_5.png" alt="i=5"><figcaption class="cap">i = 5</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_lake_7.png" alt="i=7"><figcaption class="cap">i = 7</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_lake_10.png" alt="i=10"><figcaption class="cap">i = 10</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_lake_20.png" alt="i=20"><figcaption class="cap">i = 20</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_lake_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+    </div>
+
+    <h5 class="subhead">1.7.1 Editing Hand-Drawn and Web Images</h5>
+    <p class="desc">The image-to-image procedure works especially well with non-realistic inputs like drawings. By projecting these onto the natural image manifold, we can create photorealistic versions. Below shows one web image and two hand-drawn images edited at noise levels $i_{\text{start}} = [1, 3, 5, 7, 10, 15, 20]$:</p>
+    
+
+    <h6 class="subhead">Web Image: Mountain</h6>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_mountain_1.png" alt="i=1"><figcaption class="cap">i = 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_mountain_3.png" alt="i=3"><figcaption class="cap">i = 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_mountain_5.png" alt="i=5"><figcaption class="cap">i = 5</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_mountain_7.png" alt="i=7"><figcaption class="cap">i = 7</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_mountain_10.png" alt="i=10"><figcaption class="cap">i = 10</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_mountain_15.png" alt="i=15"><figcaption class="cap">i = 15</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_mountain_20.png" alt="i=20"><figcaption class="cap">i = 20</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_mountain_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+    </div>
+
+    <h6 class="subhead">Hand-Drawn 1: Boat</h6>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_boat_1.png" alt="i=1"><figcaption class="cap">i = 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_boat_3.png" alt="i=3"><figcaption class="cap">i = 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_boat_5.png" alt="i=5"><figcaption class="cap">i = 5</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_boat_7.png" alt="i=7"><figcaption class="cap">i = 7</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_boat_10.png" alt="i=10"><figcaption class="cap">i = 10</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_boat_15.png" alt="i=15"><figcaption class="cap">i = 15</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_boat_20.png" alt="i=20"><figcaption class="cap">i = 20</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_boat_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+    </div>
+    
+    <h6 class="subhead">Hand-Drawn 2: Flower</h6>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_flower_1.png" alt="i=1"><figcaption class="cap">i = 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_flower_3.png" alt="i=3"><figcaption class="cap">i = 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_flower_5.png" alt="i=5"><figcaption class="cap">i = 5</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_flower_7.png" alt="i=7"><figcaption class="cap">i = 7</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_flower_10.png" alt="i=10"><figcaption class="cap">i = 10</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_flower_15.png" alt="i=15"><figcaption class="cap">i = 15</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_flower_20.png" alt="i=20"><figcaption class="cap">i = 20</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_1_flower_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+    </div>
+
+    <h5 class="subhead">1.7.2 Inpainting</h5>
+    <p class="desc">We can implement inpainting using the RePaint algorithm. Given an image $x_{\text{orig}}$ and a binary mask $m$, we generate new content where $m = 1$ while preserving the original content where $m = 0$. At each denoising step, after obtaining $x_t$, we force the pixels outside the mask to match the original image (with appropriate noise added):</p>
+    
+    <p class="equation">$$x_t \leftarrow m x_t + (1 - m) \text{forward}(x_{\text{orig}}, t)$$</p>
+    
+    <p class="desc">This ensures the edited region is denoised naturally while the unmasked region stays consistent with the original image.</p>
+    
+    <h6 class="subhead">Implementation</h6>
+    <pre class="code"><code>def inpaint(original_image, mask, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
+  image = torch.randn_like(original_image).to(device).half()
+
+  # use your previous `iterative_denoise_cfg` function and make the appropriate changes
+  original_image = original_image.to(device).half()
+  mask = mask.to(device).to(image.dtype)
+
+  prompt_embeds = prompt_embeds.to(device).half()
+  uncond_prompt_embeds = uncond_prompt_embeds.to(device).half()
+
+  with torch.no_grad():
+    for i in range(len(timesteps) - 1):
+      t = timesteps[i]
+      prev_t = timesteps[i + 1]
+
+      orig_noisy = forward(original_image, t).to(device).half()
+      image = mask * image + (1.0 - mask) * orig_noisy
+
+      alpha_bar_t = alphas_cumprod[t].to(device)
+      alpha_bar_prev = alphas_cumprod[prev_t].to(device)
+
+      alpha = alpha_bar_t / alpha_bar_prev
+      beta = 1.0 - alpha
+
+      image = image.to(device).half()
+      prompt_embeds = prompt_embeds.to(device).half()
+      uncond_prompt_embeds = uncond_prompt_embeds.to(device).half()
+
+      model_output = stage_1.unet(
+          image,
+          t,
+          encoder_hidden_states=prompt_embeds,
+          return_dict=False
+      )[0]
+
+      uncond_model_output = stage_1.unet(
+          image,
+          t,
+          encoder_hidden_states=uncond_prompt_embeds,
+          return_dict=False
+      )[0]
+
+      noise_est, predicted_variance = torch.split(model_output, image.shape[1], dim=1)
+      uncond_noise_est, _ = torch.split(uncond_model_output, image.shape[1], dim=1)
+
+      noise_est = uncond_noise_est + scale * (noise_est - uncond_noise_est)
+
+      sqrt_alpha_bar_t = torch.sqrt(alpha_bar_t)
+      sqrt_one_minus_alpha_bar_t = torch.sqrt(1.0 - alpha_bar_t)
+
+      x0_est = (image - sqrt_one_minus_alpha_bar_t.view(1, 1, 1, 1) * noise_est) / sqrt_alpha_bar_t.view(1, 1, 1, 1)
+
+      term_1 = (torch.sqrt(alpha_bar_prev) * beta) / (1.0 - alpha_bar_t)
+      term_2 = (torch.sqrt(alpha) * (1.0 - alpha_bar_prev)) / (1.0 - alpha_bar_t)
+
+      pred_prev_image = term_1.view(1, 1, 1, 1) * x0_est + term_2.view(1, 1, 1, 1) * image
+      pred_prev_image = add_variance(predicted_variance, t, pred_prev_image)
+
+      image = pred_prev_image
+
+      if display and (i % 5 == 0):
+        img = (image[0].detach().cpu().permute(1, 2, 0) / 2. + 0.5).numpy()
+        print(f"{timesteps[i]}")
+        media.show_image(img)
+
+  clean = image.cpu().detach().numpy()
+  return clean</code></pre>
+    
+    <h6 class="subhead">Campanile Inpainting</h6>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/campanile_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_campanile_mask.png" alt="Mask"><figcaption class="cap">Mask</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_campanile_hole_to_fill.png" alt="Hole to Fill"><figcaption class="cap">Hole to Fill</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_campanile_inpainted.png" alt="Inpainted"><figcaption class="cap">Inpainted</figcaption></figure>
+    </div>
+    
+    <h6 class="subhead">Lilypad Inpainting</h6>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_lilypad_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_lilypad_mask.png" alt="Mask"><figcaption class="cap">Mask</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_lilypad_hole_to_fill.png" alt="Hole to Fill"><figcaption class="cap">Hole to Fill</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_lilypad_inpainted.png" alt="Inpainted"><figcaption class="cap">Inpainted</figcaption></figure>
+    </div>
+    
+    <h6 class="subhead">Bridge Inpainting</h6>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_bridge_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_bridge_mask.png" alt="Mask"><figcaption class="cap">Mask</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_bridge_hole_to_fill.png" alt="Hole to Fill"><figcaption class="cap">Hole to Fill</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_2_bridge_inpainted.png" alt="Inpainted"><figcaption class="cap">Inpainted</figcaption></figure>
+    </div>
+
+    <h5 class="subhead">1.7.3 Text-Conditional Image-to-image Translation</h5>
+    <p class="desc">We apply the same SDEdit procedure but guide the projection with a text prompt. Instead of using "a high quality picture", we use specific prompts to control the style and content of the denoised result. This combines projection to the natural image manifold with language-based control. Below shows edits at noise levels $i_{\text{start}} = [1, 3, 5, 7, 10, 20]$:</p>
+    
+    <h6 class="subhead">Campanile with "rocket ship"</h6>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_campanile_1.png" alt="i=1"><figcaption class="cap">i = 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_campanile_3.png" alt="i=3"><figcaption class="cap">i = 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_campanile_5.png" alt="i=5"><figcaption class="cap">i = 5</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_campanile_7.png" alt="i=7"><figcaption class="cap">i = 7</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_campanile_10.png" alt="i=10"><figcaption class="cap">i = 10</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_campanile_20.png" alt="i=20"><figcaption class="cap">i = 20</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/campanile_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+    </div>
+    
+    <h6 class="subhead">City with "a serene beach at sunrise, minimalistic pastel colors"</h6>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_city_1.png" alt="i=1"><figcaption class="cap">i = 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_city_3.png" alt="i=3"><figcaption class="cap">i = 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_city_5.png" alt="i=5"><figcaption class="cap">i = 5</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_city_7.png" alt="i=7"><figcaption class="cap">i = 7</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_city_10.png" alt="i=10"><figcaption class="cap">i = 10</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_city_20.png" alt="i=20"><figcaption class="cap">i = 20</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_city_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+    </div>
+    
+    <h6 class="subhead">Puppy with "a fluffy white cat in soft pastel style"</h6>
+    <div class="grid cols-4">
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_puppy_1.png" alt="i=1"><figcaption class="cap">i = 1</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_puppy_3.png" alt="i=3"><figcaption class="cap">i = 3</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_puppy_5.png" alt="i=5"><figcaption class="cap">i = 5</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_puppy_7.png" alt="i=7"><figcaption class="cap">i = 7</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_puppy_10.png" alt="i=10"><figcaption class="cap">i = 10</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_puppy_20.png" alt="i=20"><figcaption class="cap">i = 20</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_7_3_puppy_original.png" alt="Original"><figcaption class="cap">Original</figcaption></figure>
+    </div>
+
+    <h4 class="subhead">1.8 Visual Anagrams</h4>
+    <p class="desc">We create optical illusions using diffusion models by generating images that reveal different content when flipped upside down. At each denoising step $t$, we denoise the image $x_t$ with prompt $p_1$ using CFG to get noise estimate $\epsilon_1$, then flip $x_t$ upside down and denoise with prompt $p_2$ to get $\epsilon_2$. We flip $\epsilon_2$ back and average the two estimates:</p>
+    
+    <p class="equation">$$\epsilon_1 = \text{CFG}(\text{UNet}(x_t, t, p_1))$$</p>
+    <p class="equation">$$\epsilon_2 = \text{flip}(\text{CFG}(\text{UNet}(\text{flip}(x_t), t, p_2)))$$</p>
+    <p class="equation">$$\epsilon = (\epsilon_1 + \epsilon_2) / 2$$</p>
+    
+    <p class="desc">We then use $\epsilon$ to perform the reverse diffusion step, creating an image that satisfies both prompts simultaneously.</p>
+    
+    <h6 class="subhead">Implementation</h6>
+    <pre class="code"><code>def make_flip_illusion(image, i_start, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
+    prompt1_embeds, prompt2_embeds = prompt_embeds
+
+    image = image.to(device).half()
+    prompt1_embeds = prompt1_embeds.to(device).half()
+    prompt2_embeds = prompt2_embeds.to(device).half()
+    uncond_prompt_embeds = uncond_prompt_embeds.to(device).half()
+
+    with torch.no_grad():
+      for i in range(i_start, len(timesteps) - 1):
+        t = timesteps[i]
+        prev_t = timesteps[i + 1]
+
+        alpha_bar_t = alphas_cumprod[t].to(device)
+        alpha_bar_prev = alphas_cumprod[prev_t].to(device)
+        alpha = alpha_bar_t / alpha_bar_prev
+        beta = 1.0 - alpha
+
+        image = image.to(device).half()
+
+        model_output_1 = stage_1.unet(
+            image,
+            t,
+            encoder_hidden_states=prompt1_embeds,
+            return_dict=False
+        )[0]
+
+        uncond_output_1 = stage_1.unet(
+            image,
+            t,
+            encoder_hidden_states=uncond_prompt_embeds,
+            return_dict=False
+        )[0]
+
+        noise_1, predicted_variance = torch.split(model_output_1, image.shape[1], dim=1)
+        uncond_noise_1, _ = torch.split(uncond_output_1, image.shape[1], dim=1)
+
+        eps_1 = uncond_noise_1 + scale * (noise_1 - uncond_noise_1)
+
+        image_flipped = torch.flip(image, dims=[2])
+
+        model_output_2 = stage_1.unet(
+            image_flipped,
+            t,
+            encoder_hidden_states=prompt2_embeds,
+            return_dict=False
+        )[0]
+
+        uncond_output_2 = stage_1.unet(
+            image_flipped,
+            t,
+            encoder_hidden_states=uncond_prompt_embeds,
+            return_dict=False
+        )[0]
+
+        noise_2, _ = torch.split(model_output_2, image.shape[1], dim=1)
+        uncond_noise_2, _ = torch.split(uncond_output_2, image.shape[1], dim=1)
+
+        eps_2 = uncond_noise_2 + scale * (noise_2 - uncond_noise_2)
+        eps_2 = torch.flip(eps_2, dims=[2])
+
+        eps = (eps_1 + eps_2) / 2.0
+
+        sqrt_alpha_bar_t = torch.sqrt(alpha_bar_t)
+        sqrt_one_minus_alpha_bar_t = torch.sqrt(1.0 - alpha_bar_t)
+
+        x0_est = (image - sqrt_one_minus_alpha_bar_t.view(1, 1, 1, 1) * eps) / sqrt_alpha_bar_t.view(1, 1, 1, 1)
+
+        term_1 = (torch.sqrt(alpha_bar_prev) * beta) / (1.0 - alpha_bar_t)
+        term_2 = (torch.sqrt(alpha) * (1.0 - alpha_bar_prev)) / (1.0 - alpha_bar_t)
+
+        pred_prev_image = term_1.view(1, 1, 1, 1) * x0_est + term_2.view(1, 1, 1, 1) * image
+        pred_prev_image = add_variance(predicted_variance, t, pred_prev_image)
+
+        image = pred_prev_image
+
+        if display and ((i - i_start) % 5 == 0):
+          img = (image[0].detach().cpu().permute(1, 2, 0) / 2. + 0.5).numpy()
+          print(f"{timesteps[i]}")
+          media.show_image(img)
+
+      clean = image.cpu().detach().numpy()
+
+    return clean</code></pre>
+    
+    <h6 class="subhead">Illusion 1: Castle Tower / Lighthouse</h6>
+    <p class="desc"><strong>Prompts:</strong> "a castle tower drawn in thin black line art" (upright) / "a lighthouse drawn in thin black line art" (flipped)</p>
+    <div class="grid cols-2">
+      <figure class="tile"><img src="./media/parta/part1/1_8_castle_upright.png" alt="Castle Tower Upright"><figcaption class="cap">Castle (Upright)</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_8_lighthouse_flipped.png" alt="Lighthouse Flipped"><figcaption class="cap">Lighthouse (Flipped)</figcaption></figure>
+    </div>
+    
+    <h6 class="subhead">Illusion 2: Forest / Mountain Lake</h6>
+    <p class="desc"><strong>Prompts:</strong> "a symmetric ink drawing of a forest with mirrored trees" (upright) / "an upside-down ink drawing of mountains reflected in water" (flipped)</p>
+    <div class="grid cols-2">
+      <figure class="tile"><img src="./media/parta/part1/1_8_forest_upright.png" alt="Forest Upright"><figcaption class="cap">Forest (Upright)</figcaption></figure>
+      <figure class="tile"><img src="./media/parta/part1/1_8_mountain_flipped.png" alt="Mountain Lake Flipped"><figcaption class="cap">Mountain (Flipped)</figcaption></figure>
+    </div>
+
+    <h4 class="subhead">1.9 Hybrid Images</h4>
+    <p class="desc">We implement Factorized Diffusion to create hybrid images. At each denoising step, we estimate noise with two different prompts, then combine the low frequencies from one estimate with the high frequencies from the other:</p>
+    
+    <p class="equation">$$\epsilon_1 = \text{CFG}(\text{UNet}(x_t, t, p_1))$$</p>
+    <p class="equation">$$\epsilon_2 = \text{CFG}(\text{UNet}(x_t, t, p_2))$$</p>
+    <p class="equation">$$\epsilon = f_{\text{lowpass}}(\epsilon_1) + f_{\text{highpass}}(\epsilon_2)$$</p>
+    
+    <p class="desc">where $f_{\text{lowpass}}$ is a Gaussian blur (kernel size 33, sigma 2) and $f_{\text{highpass}}(\epsilon_2) = \epsilon_2 - f_{\text{lowpass}}(\epsilon_2)$. This creates images that appear different at varying distances.</p>
+    
+    <h6 class="subhead">Implementation</h6>
+    <pre class="code"><code>def make_hybrids(image, i_start, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
+  prompt1_embeds, prompt2_embeds = prompt_embeds
+
+  image = image.to(device).half()
+  prompt1_embeds = prompt1_embeds.to(device).half()
+  prompt2_embeds = prompt2_embeds.to(device).half()
+  uncond_prompt_embeds = uncond_prompt_embeds.to(device).half()
+
+  with torch.no_grad():
+    for i in range(i_start, len(timesteps) - 1):
+      t = timesteps[i]
+      prev_t = timesteps[i + 1]
+
+      alpha_bar_t = alphas_cumprod[t].to(device)
+      alpha_bar_prev = alphas_cumprod[prev_t].to(device)
+      alpha = alpha_bar_t / alpha_bar_prev
+      beta = 1.0 - alpha
+
+      image = image.to(device).half()
+
+      model_output_1 = stage_1.unet(
+          image,
+          t,
+          encoder_hidden_states=prompt1_embeds,
+          return_dict=False
+      )[0]
+
+      uncond_output_1 = stage_1.unet(
+          image,
+          t,
+          encoder_hidden_states=uncond_prompt_embeds,
+          return_dict=False
+      )[0]
+
+      noise_1, predicted_variance = torch.split(model_output_1, image.shape[1], dim=1)
+      uncond_noise_1, _ = torch.split(uncond_output_1, image.shape[1], dim=1)
+
+      eps_1 = uncond_noise_1 + scale * (noise_1 - uncond_noise_1)
+
+      model_output_2 = stage_1.unet(
+          image,
+          t,
+          encoder_hidden_states=prompt2_embeds,
+          return_dict=False
+      )[0]
+
+      uncond_output_2 = stage_1.unet(
+          image,
+          t,
+          encoder_hidden_states=uncond_prompt_embeds,
+          return_dict=False
+      )[0]
+
+      noise_2, _ = torch.split(model_output_2, image.shape[1], dim=1)
+      uncond_noise_2, _ = torch.split(uncond_output_2, image.shape[1], dim=1)
+
+      eps_2 = uncond_noise_2 + scale * (noise_2 - uncond_noise_2)
+
+      eps_1_lowfreq = TF.gaussian_blur(eps_1, kernel_size=33, sigma=2.0)
+      eps_2_lowfreq = TF.gaussian_blur(eps_2, kernel_size=33, sigma=2.0)
+      eps_2_highfreq = eps_2 - eps_2_lowfreq
+
+      eps = eps_1_lowfreq + eps_2_highfreq
+
+      sqrt_alpha_bar_t = torch.sqrt(alpha_bar_t)
+      sqrt_one_minus_alpha_bar_t = torch.sqrt(1.0 - alpha_bar_t)
+
+      x0_est = (image - sqrt_one_minus_alpha_bar_t.view(1, 1, 1, 1) * eps) / sqrt_alpha_bar_t.view(1, 1, 1, 1)
+
+      term_1 = (torch.sqrt(alpha_bar_prev) * beta) / (1.0 - alpha_bar_t)
+      term_2 = (torch.sqrt(alpha) * (1.0 - alpha_bar_prev)) / (1.0 - alpha_bar_t)
+
+      pred_prev_image = term_1.view(1, 1, 1, 1) * x0_est + term_2.view(1, 1, 1, 1) * image
+      pred_prev_image = add_variance(predicted_variance, t, pred_prev_image)
+
+      image = pred_prev_image
+
+      if display and ((i - i_start) % 5 == 0):
+        img = (image[0].detach().cpu().permute(1, 2, 0) / 2. + 0.5).numpy()
+        print(f"{timesteps[i]}")
+        media.show_image(img)
+
+    clean = image.cpu().detach().numpy()
+
+  return clean</code></pre>
+    
+    <div class="grid cols-2">
+      <div>
+        <h6 class="subhead">Hybrid Image 1: Moon / Gears</h6>
+        <p class="desc"><strong>Prompts:</strong> "a clean watercolor illustration of the full moon" (low freq) / "complex brass clockwork machinery full of tiny gears and engravings" (high freq)</p>
+        <figure class="tile"><img src="./media/parta/part1/1_9_moon_gear.png" alt="Moon / Gears Hybrid"><figcaption class="cap">Low Freq: Moon | High Freq: Gears</figcaption></figure>
+      </div>
+      <div>
+        <h6 class="subhead">Hybrid Image 2: Sunrise Beach / Rocky Coast</h6>
+        <p class="desc"><strong>Prompts:</strong> "a serene beach at sunrise, minimalistic pastel colors" (low freq) / "a rocky coastline with crashing waves, hyper-detailed realism" (high freq)</p>
+        <figure class="tile"><img src="./media/parta/part1/1_9_sunset_sea.png" alt="Sunrise Beach / Rocky Coast Hybrid"><figcaption class="cap">Low Freq: Sunrise Beach | High Freq: Rocky Coast</figcaption></figure>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Part B -->
+  <section class="card" id="part-b">
+    <h2>Part B: Flow Matching from Scratch!</h2>
+    <p class="desc">Coming soon...</p>
+  </section>
+
+  <!-- Contact -->
+  <section class="contact">
+    <a href="mailto:lenci.ni@berkeley.edu?subject=CS180%20Project%205">Contact Me</a>
+  </section>
+</div>
+</body>
+</html>
