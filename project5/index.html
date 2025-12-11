@@ -162,7 +162,7 @@
     
     <p class="explanation">where $\bar{\alpha}_t$ controls the noise level (close to 1 for clean images, close to 0 for pure noise). </p>
     
-    <p class="explanation"><strong>Implementation:</strong></p>
+    <!-- <p class="explanation"><strong>Implementation:</strong></p>
     <pre><code>def forward(im, t):
   """
   Args:
@@ -177,7 +177,7 @@
     e = torch.randn_like(im)
     im_noisy = torch.sqrt(alpha_bar_t) * im + torch.sqrt(1 - alpha_bar_t) * e
 
-  return im_noisy</code></pre>
+  return im_noisy</code></pre> -->
     
     <p class="explanation">Below, I show the Campanile image at noise levels $t = 250$, $t = 500$, and $t = 750$, demonstrating how the forward diffusion process progressively corrupts the original image:</p>
     
@@ -227,11 +227,11 @@
     
     <p class="explanation">where $\hat{x}_0$ is estimated from $x_t$ using the UNet's noise prediction, $\alpha_t = \bar{\alpha}_t / \bar{\alpha}_{t'}$, and $\beta_t = 1 - \alpha_t$.</p>
     
-    <p class="explanation"><strong>Setup:</strong> Create strided timesteps starting at 990 with stride 30:</p>
+    <!-- <p class="explanation"><strong>Setup:</strong> Create strided timesteps starting at 990 with stride 30:</p>
     <pre><code>strided_timesteps = list(range(990, -1, -30))
-stage_1.scheduler.set_timesteps(timesteps=strided_timesteps)</code></pre>
+stage_1.scheduler.set_timesteps(timesteps=strided_timesteps)</code></pre> -->
     
-    <p class="explanation"><strong>Iterative Denoising Function:</strong> On the $i$-th step, we move from $t$ to $t'$ (less noisy) using the DDPM update rule:</p>
+    <!-- <p class="explanation"><strong>Iterative Denoising Function:</strong> On the $i$-th step, we move from $t$ to $t'$ (less noisy) using the DDPM update rule:</p>
     <pre><code>def iterative_denoise(im_noisy, i_start, prompt_embeds, timesteps, display=True):
   image = im_noisy
 
@@ -287,7 +287,7 @@ stage_1.scheduler.set_timesteps(timesteps=strided_timesteps)</code></pre>
 
     clean = image.cpu().detach().numpy()
 
-  return clean</code></pre>
+  return clean</code></pre> -->
     
     <p class="explanation"><strong>Results:</strong> Below shows the noisy Campanile every 5th loop of denoising, gradually becoming less noisy. The final predicted clean image using iterative denoising is compared against the one-step denoising result from Part 1.3 (which looks much worse) and the Gaussian blur result from Part 1.2:</p>
     
@@ -323,14 +323,14 @@ stage_1.scheduler.set_timesteps(timesteps=strided_timesteps)</code></pre>
     
     <p class="explanation">where $\gamma$ controls CFG strength. For $\gamma = 1$, we get the conditional estimate; for $\gamma > 1$, we extrapolate beyond it for much higher quality.</p>
     
-    <p class="explanation"><strong>Setup:</strong></p>
+    <!-- <p class="explanation"><strong>Setup:</strong></p>
     <pre><code># The conditional prompt embedding
 prompt_embeds = prompt_embeds_dict['a high quality picture']
 
 # The unconditional prompt embedding
-uncond_prompt_embeds = prompt_embeds_dict['']</code></pre>
+uncond_prompt_embeds = prompt_embeds_dict['']</code></pre> -->
     
-    <p class="explanation"><strong>Iterative Denoising with CFG:</strong></p>
+    <!-- <p class="explanation"><strong>Iterative Denoising with CFG:</strong></p>
     <pre><code>def iterative_denoise_cfg(im_noisy, i_start, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
   image = im_noisy
 
@@ -390,7 +390,7 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre>
 
     clean = image.cpu().detach().numpy()
 
-  return clean</code></pre>
+  return clean</code></pre> -->
     
     <p class="explanation"><strong>Results:</strong> Below shows 5 images generated with CFG scale $\gamma = 7$ using the prompt "a high quality picture". Compared to Part 1.5, the images show improved quality.</p>
     <div class="grid" style="grid-template-columns:repeat(5, 1fr); gap:8px;">
@@ -484,7 +484,7 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre>
     
     <p class="desc">This ensures the edited region is denoised naturally while the unmasked region stays consistent with the original image.</p>
     
-    <h6 class="subhead">Implementation</h6>
+    <!-- <h6 class="subhead">Implementation</h6>
     <pre class="code"><code>def inpaint(original_image, mask, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
   image = torch.randn_like(original_image).to(device).half()
 
@@ -551,7 +551,7 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre>
         media.show_image(img)
 
   clean = image.cpu().detach().numpy()
-  return clean</code></pre>
+  return clean</code></pre> -->
     
     <h6 class="subhead">Campanile Inpainting</h6>
     <div class="grid cols-4">
@@ -622,7 +622,7 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre>
     
     <p class="desc">We then use $\epsilon$ to perform the reverse diffusion step, creating an image that satisfies both prompts simultaneously.</p>
     
-    <h6 class="subhead">Implementation</h6>
+    <!-- <h6 class="subhead">Implementation</h6>
     <pre class="code"><code>def make_flip_illusion(image, i_start, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
     prompt1_embeds, prompt2_embeds = prompt_embeds
 
@@ -706,7 +706,7 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre>
 
       clean = image.cpu().detach().numpy()
 
-    return clean</code></pre>
+    return clean</code></pre> -->
     
     <h6 class="subhead">Illusion 1: Castle Tower / Lighthouse</h6>
     <p class="desc"><strong>Prompts:</strong> "a castle tower drawn in thin black line art" (upright) / "a lighthouse drawn in thin black line art" (flipped)</p>
@@ -731,7 +731,7 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre>
     
     <p class="desc">where $f_{\text{lowpass}}$ is a Gaussian blur (kernel size 33, sigma 2) and $f_{\text{highpass}}(\epsilon_2) = \epsilon_2 - f_{\text{lowpass}}(\epsilon_2)$. This creates images that appear different at varying distances.</p>
     
-    <h6 class="subhead">Implementation</h6>
+    <!-- <h6 class="subhead">Implementation</h6>
     <pre class="code"><code>def make_hybrids(image, i_start, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
   prompt1_embeds, prompt2_embeds = prompt_embeds
 
@@ -816,7 +816,7 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre>
 
     clean = image.cpu().detach().numpy()
 
-  return clean</code></pre>
+  return clean</code></pre> -->
     
     <div class="grid cols-2">
       <div>
