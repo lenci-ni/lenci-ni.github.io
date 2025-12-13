@@ -156,30 +156,23 @@
     <h3 class="subhead">Part 1: Sampling Loops</h3>
     
     <h4 class="subhead">1.1 Implementing the Forward Process</h4>
-    <p class="desc">The forward process gradually corrupts a clean image by adding scaled Gaussian noise. Given a clean image $x_0$, we compute the noisy image at timestep $t$ as:</p>
+    
+    <p class="desc">The forward process simulates how diffusion models progressively corrupt clean images by adding Gaussian noise over time. This is a fundamental step that allows the model to later learn how to reverse the process (denoising).</p>
+    
+    <p class="explanation">Given a clean image $x_0$, we compute the noisy image at timestep $t$ using:</p>
     
     <p class="explanation">$$x_t = \sqrt{\bar{\alpha}_t} \, x_0 + \sqrt{1 - \bar{\alpha}_t} \, \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)$$</p>
     
-    <p class="explanation">where $\bar{\alpha}_t$ controls the noise level (close to 1 for clean images, close to 0 for pure noise). </p>
+    <p class="explanation"><strong>Implementation:</strong> The process involves three key steps:</p>
+    <ul class="explanation">
+      <li><strong>Extract noise schedule parameter:</strong> Retrieve $\bar{\alpha}_t$ from the pre-computed <code>alphas_cumprod</code> array for timestep $t$</li>
+      <li><strong>Generate random noise:</strong> Sample $\epsilon \sim \mathcal{N}(0, I)$ using <code>torch.randn_like(im)</code></li>
+      <li><strong>Weighted combination:</strong> Scale the original image by $\sqrt{\bar{\alpha}_t}$ and the noise by $\sqrt{1 - \bar{\alpha}_t}$, then combine them</li>
+    </ul>
     
-    <!-- <p class="explanation"><strong>Implementation:</strong></p>
-    <pre><code>def forward(im, t):
-  """
-  Args:
-    im : torch tensor of size (1, 3, 64, 64) representing the clean image
-    t : integer timestep
-
-  Returns:
-    im_noisy : torch tensor of size (1, 3, 64, 64) representing the noisy image at timestep t
-  """
-  with torch.no_grad():
-    alpha_bar_t = alphas_cumprod[t].to(im.device)
-    e = torch.randn_like(im)
-    im_noisy = torch.sqrt(alpha_bar_t) * im + torch.sqrt(1 - alpha_bar_t) * e
-
-  return im_noisy</code></pre> -->
+    <p class="explanation">The scaling factors ensure that as $t$ increases (more noise), $\bar{\alpha}_t$ decreases toward 0, reducing the original image's contribution while increasing the noise contribution. At $t=0$ (clean), $\bar{\alpha}_t \approx 1$ preserves the original image; at high $t$, the image becomes pure noise.</p>
     
-    <p class="explanation">Below, I show the Campanile image at noise levels $t = 250$, $t = 500$, and $t = 750$, demonstrating how the forward diffusion process progressively corrupts the original image:</p>
+    <p class="explanation">Below, I show the Campanile image at noise levels $t = 250$, $t = 500$, and $t = 750$, demonstrating this progressive corruption:</p>
     
     <div class="grid cols-4">
       <figure class="tile"><img src="./media/parta/part1/campanile_original.png" alt="Original Campanile"><figcaption class="cap">Original<br><small>t = 0</small></figcaption></figure>
@@ -219,13 +212,21 @@
     </div>
 
     <h4 class="subhead">1.4 Iterative Denoising</h4>
-    <p class="desc">While one-step denoising works reasonably well, diffusion models are designed to denoise iteratively. Rather than running 1000 steps (slow and expensive), we can skip steps by creating strided timesteps. Starting from $t=990$ with stride 30, we progressively denoise until reaching a clean image at $t=0$.</p>
     
-    <p class="explanation">At each step, we interpolate between the estimated clean image $\hat{x}_0$ and the current noisy image using the DDPM update formula:</p>
+    <p class="desc">While one-step denoising works reasonably well, diffusion models are designed to denoise iteratively. Instead of running all 1000 timesteps (slow and expensive), we can skip steps using a strided schedule. This allows us to progressively remove noise in fewer steps while maintaining high quality.</p>
     
-    <p class="explanation">$$x_{t'} = \frac{\sqrt{\bar{\alpha}_{t'}} \cdot \beta_t}{1 - \bar{\alpha}_t} \hat{x}_0 + \frac{\sqrt{\alpha_t}(1 - \bar{\alpha}_{t'})}{1 - \bar{\alpha}_t} x_t + \text{variance}$$</p>
+    <p class="explanation"><strong>Implementation:</strong> The process involves three key components:</p>
+    <ul class="explanation">
+      <li><strong>Create strided timesteps:</strong> Generate a list from $t=990$ to $t=0$ with stride 30</li>
+      <li><strong>Estimate clean image:</strong> At each step $t$, use the UNet to predict noise $\epsilon_t$, then compute $\hat{x}_0 = \frac{x_t - \sqrt{1-\bar{\alpha}_t} \epsilon_t}{\sqrt{\bar{\alpha}_t}}$</li>
+      <li><strong>DDPM update step:</strong> Move from $x_t$ to $x_{t'}$ (less noisy) using a weighted combination of the estimated clean image and current noisy image</li>
+    </ul>
     
-    <p class="explanation">where $\hat{x}_0$ is estimated from $x_t$ using the UNet's noise prediction, $\alpha_t = \bar{\alpha}_t / \bar{\alpha}_{t'}$, and $\beta_t = 1 - \alpha_t$.</p>
+    <p class="explanation">The DDPM update formula interpolates between signal and noise:</p>
+    
+    <p class="explanation">$$x_{t'} = \frac{\sqrt{\bar{\alpha}_{t'}} \cdot \beta_t}{1 - \bar{\alpha}_t} \hat{x}_0 + \frac{\sqrt{\alpha_t}(1 - \bar{\alpha}_{t'})}{1 - \bar{\alpha}_t} x_t + v_\sigma$$</p>
+    
+    <p class="explanation">where $\alpha_t = \bar{\alpha}_t / \bar{\alpha}_{t'}$, $\beta_t = 1 - \alpha_t$, and $v_\sigma$ is learned variance. This gradually shifts from noisy to clean while maintaining image structure.</p>
     
     <!-- <p class="explanation"><strong>Setup:</strong> Create strided timesteps starting at 990 with stride 30:</p>
     <pre><code>strided_timesteps = list(range(990, -1, -30))
@@ -478,11 +479,21 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre> -->
     </div>
 
     <h5 class="subhead">1.7.2 Inpainting</h5>
-    <p class="desc">We can implement inpainting using the RePaint algorithm. Given an image $x_{\text{orig}}$ and a binary mask $m$, we generate new content where $m = 1$ while preserving the original content where $m = 0$. At each denoising step, after obtaining $x_t$, we force the pixels outside the mask to match the original image (with appropriate noise added):</p>
+    
+    <p class="desc">Inpainting allows us to edit specific regions of an image while preserving the rest. Following the RePaint algorithm, we can generate new content in masked areas while keeping unmasked areas identical to the original image throughout the diffusion process.</p>
+    
+    <p class="explanation"><strong>Implementation:</strong> The key insight is to combine iterative denoising with CFG, but add a projection step at each iteration:</p>
+    <ul class="explanation">
+      <li><strong>Start with random noise:</strong> Initialize the entire image as noise (not just the masked region)</li>
+      <li><strong>Projection at each step:</strong> After computing $x_t$, replace unmasked pixels with the correctly-noised original</li>
+      <li><strong>CFG for quality:</strong> Use classifier-free guidance to generate high-quality content in the masked region</li>
+    </ul>
+    
+    <p class="explanation">The projection formula enforces consistency with the original:</p>
     
     <p class="equation">$$x_t \leftarrow m x_t + (1 - m) \text{forward}(x_{\text{orig}}, t)$$</p>
     
-    <p class="desc">This ensures the edited region is denoised naturally while the unmasked region stays consistent with the original image.</p>
+    <p class="explanation">where $m$ is the binary mask (1 = edit region, 0 = preserve region). This ensures that at each timestep $t$, the unmasked area contains the original image with the exact noise level expected at that timestep, creating a seamless blend between generated and original content.</p>
     
     <!-- <h6 class="subhead">Implementation</h6>
     <pre class="code"><code>def inpaint(original_image, mask, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
@@ -614,13 +625,23 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre> -->
     </div>
 
     <h4 class="subhead">1.8 Visual Anagrams</h4>
-    <p class="desc">We create optical illusions using diffusion models by generating images that reveal different content when flipped upside down. At each denoising step $t$, we denoise the image $x_t$ with prompt $p_1$ using CFG to get noise estimate $\epsilon_1$, then flip $x_t$ upside down and denoise with prompt $p_2$ to get $\epsilon_2$. We flip $\epsilon_2$ back and average the two estimates:</p>
+    
+    <p class="desc">Visual anagrams create optical illusions where an image shows different content depending on its orientation. By simultaneously optimizing for two different prompts (one upright, one flipped), we can generate images that satisfy both interpretations.</p>
+    
+    <p class="explanation"><strong>Implementation:</strong> The key is to compute a composite noise estimate that guides the image toward both prompts:</p>
+    <ul class="explanation">
+      <li><strong>Denoise upright:</strong> Apply CFG with prompt $p_1$ to get noise estimate $\epsilon_1$ for the normal orientation</li>
+      <li><strong>Denoise flipped:</strong> Flip $x_t$ upside down, apply CFG with prompt $p_2$ to get $\epsilon_2$, then flip $\epsilon_2$ back</li>
+      <li><strong>Average noise estimates:</strong> Compute $\epsilon = (\epsilon_1 + \epsilon_2) / 2$ to create a compromise that satisfies both prompts</li>
+    </ul>
+    
+    <p class="explanation">The algorithm at each denoising step:</p>
     
     <p class="equation">$$\epsilon_1 = \text{CFG}(\text{UNet}(x_t, t, p_1))$$</p>
     <p class="equation">$$\epsilon_2 = \text{flip}(\text{CFG}(\text{UNet}(\text{flip}(x_t), t, p_2)))$$</p>
     <p class="equation">$$\epsilon = (\epsilon_1 + \epsilon_2) / 2$$</p>
     
-    <p class="desc">We then use $\epsilon$ to perform the reverse diffusion step, creating an image that satisfies both prompts simultaneously.</p>
+    <p class="explanation">By averaging the noise estimates, we force the model to find visual features that work for both orientations. This creates images with dual interpretations—structures that suggest one subject upright but reveal another when flipped.</p>
     
     <!-- <h6 class="subhead">Implementation</h6>
     <pre class="code"><code>def make_flip_illusion(image, i_start, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
@@ -723,13 +744,24 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre> -->
     </div>
 
     <h4 class="subhead">1.9 Hybrid Images</h4>
-    <p class="desc">We implement Factorized Diffusion to create hybrid images. At each denoising step, we estimate noise with two different prompts, then combine the low frequencies from one estimate with the high frequencies from the other:</p>
+    
+    <p class="desc">Using Factorized Diffusion, we can create hybrid images that reveal different content depending on viewing distance. By combining frequency components from two different prompts during the denoising process, we generate images where low-frequency structure suggests one subject while high-frequency details suggest another.</p>
+    
+    <p class="explanation"><strong>Implementation:</strong> Similar to visual anagrams, we create a composite noise estimate, but this time by combining frequency bands:</p>
+    <ul class="explanation">
+      <li><strong>Generate two noise estimates:</strong> Apply CFG with both prompts $p_1$ and $p_2$ on the same noisy image $x_t$ to get $\epsilon_1$ and $\epsilon_2$</li>
+      <li><strong>Extract low frequencies:</strong> Apply Gaussian blur to $\epsilon_1$ to get $f_{\text{lowpass}}(\epsilon_1)$ (coarse structure)</li>
+      <li><strong>Extract high frequencies:</strong> Compute $f_{\text{highpass}}(\epsilon_2) = \epsilon_2 - f_{\text{lowpass}}(\epsilon_2)$ (fine details)</li>
+      <li><strong>Combine:</strong> Sum the low frequencies from prompt 1 with high frequencies from prompt 2</li>
+    </ul>
+    
+    <p class="explanation">The algorithm at each denoising step:</p>
     
     <p class="equation">$$\epsilon_1 = \text{CFG}(\text{UNet}(x_t, t, p_1))$$</p>
     <p class="equation">$$\epsilon_2 = \text{CFG}(\text{UNet}(x_t, t, p_2))$$</p>
     <p class="equation">$$\epsilon = f_{\text{lowpass}}(\epsilon_1) + f_{\text{highpass}}(\epsilon_2)$$</p>
     
-    <p class="desc">where $f_{\text{lowpass}}$ is a Gaussian blur (kernel size 33, sigma 2) and $f_{\text{highpass}}(\epsilon_2) = \epsilon_2 - f_{\text{lowpass}}(\epsilon_2)$. This creates images that appear different at varying distances.</p>
+    <p class="explanation">Using kernel size 33 and sigma 2 for Gaussian blur, this creates images where the low-frequency prompt dominates when viewed from afar, while the high-frequency prompt becomes visible up close.</p>
     
     <!-- <h6 class="subhead">Implementation</h6>
     <pre class="code"><code>def make_hybrids(image, i_start, prompt_embeds, uncond_prompt_embeds, timesteps, scale=7, display=True):
@@ -836,7 +868,60 @@ uncond_prompt_embeds = prompt_embeds_dict['']</code></pre> -->
   <!-- Part B -->
   <section class="card" id="part-b">
     <h2>Part B: Flow Matching from Scratch!</h2>
-    <p class="desc">Coming soon...</p>
+    
+    <h3 class="subhead">Part 1: Training a Single-Step Denoising UNet</h3>
+    
+    <h4 class="subhead">1.1 Implementing the UNet</h4>
+    <p class="desc">TODO</p>
+    
+    <h4 class="subhead">1.2 Using the UNet to Train a Denoiser</h4>
+    <p class="desc">The goal is to train a denoiser $D_\theta$ that maps a noisy image $z$ to a clean image $x$. We optimize the following L2 loss:</p>
+    <p style="text-align: center; margin: 16px 0;">$\mathcal{L} = \mathbb{E}_{z,x} \|D_\theta(z) - x\|^2$</p>
+    <p class="desc">To generate training pairs $(z, x)$ where $x$ is a clean MNIST digit, we apply the noising process:</p>
+    <p style="text-align: center; margin: 16px 0;">$z = x + \sigma \epsilon$, where $\epsilon \sim \mathcal{N}(0, I)$</p>
+    <p class="desc">For each training batch, we sample random $\sigma$ values and add Gaussian noise to clean images, allowing the network to learn denoising across different noise levels. Below is a visualization of the noising process for normalized images using $\sigma = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]$. As $\sigma$ increases, the images become progressively noisier:</p>
+    <figure class="tile"><img src="./media/partb/part1/1_2_noising_process.png" alt="Noising process visualization" style="width: 100%;"><figcaption class="cap">Noising Process with Varying σ</figcaption></figure>
+    
+    <h5 class="subhead">1.2.1 Training</h5>
+    <p class="desc">I trained a UNet denoiser (D=128) on the MNIST training set for 5 epochs using the Adam optimizer (lr=1e-4, batch size=256). For each batch, random noise with varying $\sigma$ values was applied during training, ensuring the network saw different noised versions of each image across epochs, improving generalization.</p>
+    
+    <p class="desc"><strong>Training Loss Curve:</strong></p>
+    <div style="text-align: center;">
+      <figure class="tile" style="display: inline-block; width: 50%;"><img src="./media/partb/part1/1_2_1_loss_graph.png" alt="Training loss curve" style="width: 100%;"><figcaption class="cap">Training Loss Curve Over Iterations</figcaption></figure>
+    </div>
+    
+    <p class="desc"><strong>Denoising Results:</strong> Below are sample results on the test set with noise level $\sigma = 0.5$ after epoch 1 and epoch 5, showing progressive improvement in denoising quality.</p>
+    <figure class="tile"><img src="./media/partb/part1/1_2_1_epoch_1.png" alt="Denoising results after epoch 1" style="width: 100%;"><figcaption class="cap">Denoising Results - After Epoch 1 (σ = 0.5)</figcaption></figure>
+    <figure class="tile"><img src="./media/partb/part1/1_2_1_epoch_5.png" alt="Denoising results after epoch 5" style="width: 100%;"><figcaption class="cap">Denoising Results - After Epoch 5 (σ = 0.5)</figcaption></figure>
+    
+    <h5 class="subhead">1.2.2 Out-of-Distribution Testing</h5>
+    <p class="desc">Our denoiser was trained on MNIST digits with noise level $\sigma = 0.5$. To test the model's generalization, I evaluated its performance on out-of-distribution noise levels $\sigma = [0.0, 0.2, 0.4, 0.5, 0.6, 0.8, 1.0]$. Below are sample results on the test set showing how the denoiser handles varying levels of noise:</p>
+    <figure class="tile"><img src="./media/partb/part1/1_2_2_digit_7.png" alt="OOD denoising digit 7" style="width: 100%;"><figcaption class="cap">Out-of-Distribution Denoising Results - Digit 7</figcaption></figure>
+    <figure class="tile"><img src="./media/partb/part1/1_2_2_digit_2.png" alt="OOD denoising digit 2" style="width: 100%;"><figcaption class="cap">Out-of-Distribution Denoising Results - Digit 2</figcaption></figure>
+    <figure class="tile"><img src="./media/partb/part1/1_2_2_digit_1.png" alt="OOD denoising digit 1" style="width: 100%;"><figcaption class="cap">Out-of-Distribution Denoising Results - Digit 1</figcaption></figure>
+    
+    <h5 class="subhead">1.2.3 Denoising Pure Noise</h5>
+    <p class="desc">TODO</p>
+    
+    <h3 class="subhead">Part 2: Training a Flow Matching Model</h3>
+    
+    <h4 class="subhead">2.1 Adding Time Conditioning to UNet</h4>
+    <p class="desc">TODO</p>
+    
+    <h4 class="subhead">2.2 Training the UNet</h4>
+    <p class="desc">TODO</p>
+    
+    <h4 class="subhead">2.3 Sampling from the UNet</h4>
+    <p class="desc">TODO</p>
+    
+    <h4 class="subhead">2.4 Adding Class-Conditioning to UNet</h4>
+    <p class="desc">TODO</p>
+    
+    <h4 class="subhead">2.5 Training the UNet</h4>
+    <p class="desc">TODO</p>
+    
+    <h4 class="subhead">2.6 Sampling from the UNet</h4>
+    <p class="desc">TODO</p>
   </section>
 
   <!-- Contact -->
